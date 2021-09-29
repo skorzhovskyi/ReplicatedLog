@@ -15,12 +15,11 @@ namespace ReplicatedLogClient
         public FormReplicatedLogClient()
         {
             InitializeComponent();
-            iPv4EndPointTextBox.IPEndPoint = new System.Net.IPEndPoint(new System.Net.IPAddress(new byte[] { 192, 168, 0, 105 }), 2100);
         }
 
         private void buttonConnect_Click(object sender, EventArgs e)
         {
-            Client client = new Client(iPv4EndPointTextBox.IPEndPoint);
+            Client client = new Client(new Uri(textBoxURL.Text));
 
             client.sendMessage("Hi!");
         }

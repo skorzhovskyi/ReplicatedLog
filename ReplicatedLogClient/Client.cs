@@ -7,50 +7,37 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Net.Http;
 
 namespace ReplicatedLogClient
 {
     class Client
     {
-        private TcpClient socket;
+        private HttpClient m_httpClient;
 
-        public Client(IPEndPoint endpoint)
+        public Client(Uri endpoint)
         {
-            this.socket = new TcpClient();
-            socket.Connect(endpoint);
+            m_httpClient = new HttpClient();
+            m_httpClient.BaseAddress = endpoint;
         }
 
         ~Client()
         {
-            if (this.socket != null)
+            if (this.m_httpClient != null)
             {
-                this.socket.Close();
+                this.m_httpClient.Dispose();
             }
         }
 
         public void sendMessage(String msg)
         {
-            Thread.Sleep(10000);
-            byte[] buffer = Encoding.UTF8.GetBytes(msg);
-            this.socket.GetStream().Write(buffer, 0, buffer.Length);
-            Thread receiveThread = new Thread(receiveMessage);
-            receiveThread.Start();
-        }
-
-        public String getIP()
-        {
-            return this.socket.Client.RemoteEndPoint.ToString();
-        }
-
-        private void receiveMessage()
-        {
-            while (socket.Connected)
+            HttpContent content = new StringContent(msg);
+            HttpResponseMessage response = m_httpClient.PostAsync(m_httpClient.BaseAddress, content).Result;
+            
+            if (response.StatusCode == HttpStatusCode.OK)
             {
-                byte[] buffer = new byte[socket.Available];
-                this.socket.GetStream().Read(buffer, 0, buffer.Length);
-                String message = Encoding.UTF8.GetString(buffer);
-
-                MessageBox.Show(message);
+                String respMsg = response.Content.ReadAsStringAsync().Result;
+                MessageBox.Show(respMsg);
             }
         }
     }

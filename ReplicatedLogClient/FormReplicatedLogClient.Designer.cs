@@ -29,7 +29,6 @@ namespace ReplicatedLogClient
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormReplicatedLogClient));
             this.buttonConnect = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.buttonSend = new System.Windows.Forms.Button();
@@ -39,13 +38,13 @@ namespace ReplicatedLogClient
             this.label2 = new System.Windows.Forms.Label();
             this.listView2 = new System.Windows.Forms.ListView();
             this.label3 = new System.Windows.Forms.Label();
-            this.iPv4EndPointTextBox = new IPv4EndPoint.IPv4EndPointTextBox();
             this.label4 = new System.Windows.Forms.Label();
+            this.textBoxURL = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // buttonConnect
             // 
-            this.buttonConnect.Location = new System.Drawing.Point(203, 28);
+            this.buttonConnect.Location = new System.Drawing.Point(203, 29);
             this.buttonConnect.Name = "buttonConnect";
             this.buttonConnect.Size = new System.Drawing.Size(59, 23);
             this.buttonConnect.TabIndex = 1;
@@ -102,9 +101,9 @@ namespace ReplicatedLogClient
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(12, 9);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(38, 13);
+            this.label2.Size = new System.Drawing.Size(29, 13);
             this.label2.TabIndex = 7;
-            this.label2.Text = "Server";
+            this.label2.Text = "URL";
             // 
             // listView2
             // 
@@ -124,19 +123,6 @@ namespace ReplicatedLogClient
             this.label3.TabIndex = 9;
             this.label3.Text = "Servers";
             // 
-            // iPv4EndPointTextBox
-            // 
-            this.iPv4EndPointTextBox.AutoSize = true;
-            this.iPv4EndPointTextBox.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.iPv4EndPointTextBox.BackColor = System.Drawing.SystemColors.Window;
-            this.iPv4EndPointTextBox.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
-            this.iPv4EndPointTextBox.IPEndPoint = ((System.Net.IPEndPoint)(resources.GetObject("iPv4EndPointTextBox.IPAddress")));
-            this.iPv4EndPointTextBox.Location = new System.Drawing.Point(15, 31);
-            this.iPv4EndPointTextBox.Margin = new System.Windows.Forms.Padding(2);
-            this.iPv4EndPointTextBox.Name = "iPv4EndPointTextBox";
-            this.iPv4EndPointTextBox.Size = new System.Drawing.Size(183, 17);
-            this.iPv4EndPointTextBox.TabIndex = 10;
-            // 
             // label4
             // 
             this.label4.AutoSize = true;
@@ -146,13 +132,21 @@ namespace ReplicatedLogClient
             this.label4.TabIndex = 11;
             this.label4.Text = "Send message";
             // 
+            // textBoxURL
+            // 
+            this.textBoxURL.Location = new System.Drawing.Point(15, 30);
+            this.textBoxURL.Name = "textBoxURL";
+            this.textBoxURL.Size = new System.Drawing.Size(182, 20);
+            this.textBoxURL.TabIndex = 12;
+            this.textBoxURL.Text = "http://localhost:2100/replicated_log/";
+            // 
             // FormReplicatedLogClient
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(532, 527);
+            this.Controls.Add(this.textBoxURL);
             this.Controls.Add(this.label4);
-            this.Controls.Add(this.iPv4EndPointTextBox);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.listView2);
             this.Controls.Add(this.label2);
@@ -181,8 +175,8 @@ namespace ReplicatedLogClient
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.ListView listView2;
         private System.Windows.Forms.Label label3;
-        private IPv4EndPoint.IPv4EndPointTextBox iPv4EndPointTextBox;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.TextBox textBoxURL;
     }
 }
 
