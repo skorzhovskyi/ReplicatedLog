@@ -11,9 +11,14 @@ using System.Net.Http;
 
 namespace ReplicatedLogClient
 {
-    class Client
+    class Client 
     {
         private HttpClient m_httpClient;
+
+        public HttpClient HttpClient
+        {
+            get => m_httpClient;
+        }
 
         public Client(Uri endpoint)
         {
@@ -23,22 +28,47 @@ namespace ReplicatedLogClient
 
         ~Client()
         {
-            if (this.m_httpClient != null)
-            {
-                this.m_httpClient.Dispose();
-            }
+            if (m_httpClient != null)
+                m_httpClient.Dispose();            
         }
 
-        public void sendMessage(String msg)
+        public void SendMessage(String msg)
         {
             HttpContent content = new StringContent(msg);
             HttpResponseMessage response = m_httpClient.PostAsync(m_httpClient.BaseAddress, content).Result;
             
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                String respMsg = response.Content.ReadAsStringAsync().Result;
-                MessageBox.Show(respMsg);
+
+            }            
+        }
+
+        public List<string> GetMessages()
+        {
+            HttpResponseMessage response = m_httpClient.GetAsync(m_httpClient.BaseAddress).Result;
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                List<string> result = new List<string>();
+
+                var buffer = response.Content.ReadAsByteArrayAsync().Result;
+
+                int pos = 0;
+
+                while (pos < buffer.Length)
+                {
+                    int size = BitConverter.ToInt32(buffer, pos);
+                    pos += sizeof(int);
+
+                    result.Add(Encoding.ASCII.GetString(buffer, pos, size));
+
+                    pos += size;
+                }
+
+                return result;
             }
+
+            return null;
         }
     }
 }

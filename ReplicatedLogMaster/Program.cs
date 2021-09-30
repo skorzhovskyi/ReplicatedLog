@@ -11,53 +11,88 @@ namespace ReplicatedLogMaster
 {
     class Server
     {
-        HttpListener Listener;
+        List<string> m_messages;
+
+        HttpListener m_listener;
 
         public Server(int port)
         {
-            IPAddress ipAddress = Dns.GetHostAddresses(Dns.GetHostName()).First(x => x.AddressFamily == AddressFamily.InterNetwork);
+            m_messages = new List<string>();
 
-            Listener = new HttpListener();
-            Listener.Prefixes.Add("http://localhost:" + port + "/replicated_log/");
-            Listener.Start();
-            
-            Console.WriteLine("Server is running, prefixes: " + Listener.Prefixes);
+            m_listener = new HttpListener();
+            m_listener.Prefixes.Add("http://localhost:" + port + "/replicated_log/master/");
+            m_listener.Start();
+
+            Console.WriteLine("Server is running, prefixes: ");
+
+            foreach (var pref in m_listener.Prefixes)
+                Console.WriteLine("\t" + pref);
 
             while (true)
             {
-                HttpListenerContext context = Listener.GetContext();
+                HttpListenerContext context = m_listener.GetContext();
                 HttpListenerRequest request = context.Request;
                 HttpListenerResponse response = context.Response;
                 
-                Console.WriteLine("New client is connected");
+                Console.WriteLine("\nNew client is connected");
 
-                Console.WriteLine("Request processing...");
-                Thread.Sleep(10000);
+                if (request.HttpMethod == "GET")
+                {
+                    Console.WriteLine("Request processing...");
+                    Thread.Sleep(10000);
 
-                byte[] buffer;
-                string message = "";
-            
-                buffer = new byte[request.ContentLength64];
-                request.InputStream.Read(buffer, 0, buffer.Length);
-                message = Encoding.UTF8.GetString(buffer);
+                    byte[] buffer = new byte[GetMessagesSize()];
 
-                Console.WriteLine("Message received: " + message);
+                    int pos = 0;
 
-                buffer = Encoding.UTF8.GetBytes("Message received");
-                response.OutputStream.Write(buffer, 0, buffer.Length);
+                    foreach (var msg in m_messages)
+                    {
+                        Array.Copy(BitConverter.GetBytes(msg.Length), 0, buffer, pos, sizeof(int));
+                        pos += sizeof(int);
+                        Array.Copy(Encoding.ASCII.GetBytes(msg), 0, buffer, pos, msg.Length);
+                        pos += msg.Length;
+                    }
 
-                response.OutputStream.Close();
+                    response.OutputStream.Write(buffer, 0, buffer.Length);
+                    response.OutputStream.Close();
+                }
+                else if (request.HttpMethod == "POST")
+                {
+                    byte[] buffer = new byte[request.ContentLength64];
+                    request.InputStream.Read(buffer, 0, buffer.Length);
+                    string msg = Encoding.UTF8.GetString(buffer);
+
+                    Console.WriteLine("Message received: " + msg);
+
+                    m_messages.Add(msg);
+
+                    request.InputStream.Close();
+                }
+
+                response.Close();
+
+                Console.WriteLine("");
             }
         }
 
         ~Server()
         {
-            if (Listener != null)
+            if (m_listener != null)
             {
-                Listener.Stop();
+                m_listener.Stop();
             }
         }
 
+
+        private int GetMessagesSize()
+        {
+            int size = sizeof(int) * m_messages.Count;
+
+            foreach (var msg in m_messages)
+                size += msg.Length;
+
+            return size;
+        }
     }
 
     class Program

@@ -30,13 +30,13 @@ namespace ReplicatedLogClient
         private void InitializeComponent()
         {
             this.buttonConnect = new System.Windows.Forms.Button();
-            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.textBoxMessage = new System.Windows.Forms.TextBox();
             this.buttonSend = new System.Windows.Forms.Button();
             this.buttonRefresh = new System.Windows.Forms.Button();
-            this.listView1 = new System.Windows.Forms.ListView();
+            this.listViewMessages = new System.Windows.Forms.ListView();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
-            this.listView2 = new System.Windows.Forms.ListView();
+            this.listViewServers = new System.Windows.Forms.ListView();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.textBoxURL = new System.Windows.Forms.TextBox();
@@ -52,13 +52,13 @@ namespace ReplicatedLogClient
             this.buttonConnect.UseVisualStyleBackColor = true;
             this.buttonConnect.Click += new System.EventHandler(this.buttonConnect_Click);
             // 
-            // textBox1
+            // textBoxMessage
             // 
-            this.textBox1.Location = new System.Drawing.Point(15, 272);
-            this.textBox1.Multiline = true;
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(247, 216);
-            this.textBox1.TabIndex = 2;
+            this.textBoxMessage.Location = new System.Drawing.Point(15, 272);
+            this.textBoxMessage.Multiline = true;
+            this.textBoxMessage.Name = "textBoxMessage";
+            this.textBoxMessage.Size = new System.Drawing.Size(247, 216);
+            this.textBoxMessage.TabIndex = 2;
             // 
             // buttonSend
             // 
@@ -68,6 +68,7 @@ namespace ReplicatedLogClient
             this.buttonSend.TabIndex = 3;
             this.buttonSend.Text = "Send";
             this.buttonSend.UseVisualStyleBackColor = true;
+            this.buttonSend.Click += new System.EventHandler(this.buttonSend_Click);
             // 
             // buttonRefresh
             // 
@@ -77,15 +78,20 @@ namespace ReplicatedLogClient
             this.buttonRefresh.TabIndex = 4;
             this.buttonRefresh.Text = "Refresh";
             this.buttonRefresh.UseVisualStyleBackColor = true;
+            this.buttonRefresh.Click += new System.EventHandler(this.buttonRefresh_Click);
             // 
-            // listView1
+            // listViewMessages
             // 
-            this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(290, 25);
-            this.listView1.Name = "listView1";
-            this.listView1.Size = new System.Drawing.Size(229, 463);
-            this.listView1.TabIndex = 5;
-            this.listView1.UseCompatibleStateImageBehavior = false;
+            this.listViewMessages.FullRowSelect = true;
+            this.listViewMessages.GridLines = true;
+            this.listViewMessages.HideSelection = false;
+            this.listViewMessages.Location = new System.Drawing.Point(290, 25);
+            this.listViewMessages.MultiSelect = false;
+            this.listViewMessages.Name = "listViewMessages";
+            this.listViewMessages.Size = new System.Drawing.Size(229, 463);
+            this.listViewMessages.TabIndex = 5;
+            this.listViewMessages.UseCompatibleStateImageBehavior = false;
+            this.listViewMessages.View = System.Windows.Forms.View.List;
             // 
             // label1
             // 
@@ -105,14 +111,16 @@ namespace ReplicatedLogClient
             this.label2.TabIndex = 7;
             this.label2.Text = "URL";
             // 
-            // listView2
+            // listViewServers
             // 
-            this.listView2.HideSelection = false;
-            this.listView2.Location = new System.Drawing.Point(15, 79);
-            this.listView2.Name = "listView2";
-            this.listView2.Size = new System.Drawing.Size(247, 153);
-            this.listView2.TabIndex = 8;
-            this.listView2.UseCompatibleStateImageBehavior = false;
+            this.listViewServers.HideSelection = false;
+            this.listViewServers.LabelWrap = false;
+            this.listViewServers.Location = new System.Drawing.Point(15, 79);
+            this.listViewServers.MultiSelect = false;
+            this.listViewServers.Name = "listViewServers";
+            this.listViewServers.Size = new System.Drawing.Size(247, 153);
+            this.listViewServers.TabIndex = 8;
+            this.listViewServers.UseCompatibleStateImageBehavior = false;
             // 
             // label3
             // 
@@ -138,7 +146,7 @@ namespace ReplicatedLogClient
             this.textBoxURL.Name = "textBoxURL";
             this.textBoxURL.Size = new System.Drawing.Size(182, 20);
             this.textBoxURL.TabIndex = 12;
-            this.textBoxURL.Text = "http://localhost:2100/replicated_log/";
+            this.textBoxURL.Text = "http://localhost:2100/replicated_log/master/";
             // 
             // FormReplicatedLogClient
             // 
@@ -148,13 +156,13 @@ namespace ReplicatedLogClient
             this.Controls.Add(this.textBoxURL);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.listView2);
+            this.Controls.Add(this.listViewServers);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.listView1);
+            this.Controls.Add(this.listViewMessages);
             this.Controls.Add(this.buttonRefresh);
             this.Controls.Add(this.buttonSend);
-            this.Controls.Add(this.textBox1);
+            this.Controls.Add(this.textBoxMessage);
             this.Controls.Add(this.buttonConnect);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -167,13 +175,13 @@ namespace ReplicatedLogClient
 
         #endregion
         private System.Windows.Forms.Button buttonConnect;
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox textBoxMessage;
         private System.Windows.Forms.Button buttonSend;
         private System.Windows.Forms.Button buttonRefresh;
-        private System.Windows.Forms.ListView listView1;
+        private System.Windows.Forms.ListView listViewMessages;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.ListView listView2;
+        private System.Windows.Forms.ListView listViewServers;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox textBoxURL;
