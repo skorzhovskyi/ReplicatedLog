@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  tas-slave:
+    build: .
+    command: ["python", "service.py"]
+    environment:
+      SLAVE_HOST: '0.0.0.0'
+      SLAVE_PORT: 5000
+    ports:
+      - 8082:5000
