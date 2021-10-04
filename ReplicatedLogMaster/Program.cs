@@ -34,12 +34,12 @@ namespace ReplicatedLogMaster
                 HttpListenerRequest request = context.Request;
                 HttpListenerResponse response = context.Response;
                 
-                Console.WriteLine("\nNew client is connected");
+                Console.WriteLine("\nClient is connected");
 
                 if (request.HttpMethod == "GET")
                 {
                     Console.WriteLine("Request processing...");
-                    Thread.Sleep(10000);
+                    Thread.Sleep(5000);
 
                     byte[] buffer = new byte[GetMessagesSize()];
 
@@ -55,6 +55,8 @@ namespace ReplicatedLogMaster
 
                     response.OutputStream.Write(buffer, 0, buffer.Length);
                     response.OutputStream.Close();
+
+                    Console.WriteLine("GET request processed");
                 }
                 else if (request.HttpMethod == "POST")
                 {
@@ -67,11 +69,11 @@ namespace ReplicatedLogMaster
                     m_messages.Add(msg);
 
                     request.InputStream.Close();
+
+                    Console.WriteLine("POST request processed");
                 }
 
                 response.Close();
-
-                Console.WriteLine("");
             }
         }
 
