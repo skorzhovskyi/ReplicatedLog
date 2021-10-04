@@ -26,19 +26,19 @@ namespace ReplicatedLogMaster
             Console.WriteLine("Server is running, prefixes: ");
 
             foreach (var pref in m_listener.Prefixes)
-                Console.WriteLine("\t" + pref);
+                Console.WriteLine(pref);
+
+            Console.WriteLine();
 
             while (true)
             {
                 HttpListenerContext context = m_listener.GetContext();
                 HttpListenerRequest request = context.Request;
-                HttpListenerResponse response = context.Response;
-                
-                Console.WriteLine("\nClient is connected");
-
+                HttpListenerResponse response = context.Response;                
+               
                 if (request.HttpMethod == "GET")
                 {
-                    Console.WriteLine("Request processing...");
+                    Console.WriteLine("GET request processing...");
                     Thread.Sleep(5000);
 
                     byte[] buffer = new byte[GetMessagesSize()];
@@ -60,6 +60,8 @@ namespace ReplicatedLogMaster
                 }
                 else if (request.HttpMethod == "POST")
                 {
+                    Console.WriteLine("POST request processing...");
+
                     byte[] buffer = new byte[request.ContentLength64];
                     request.InputStream.Read(buffer, 0, buffer.Length);
                     string msg = Encoding.UTF8.GetString(buffer);
@@ -73,6 +75,7 @@ namespace ReplicatedLogMaster
                     Console.WriteLine("POST request processed");
                 }
 
+                Console.WriteLine();
                 response.Close();
             }
         }
