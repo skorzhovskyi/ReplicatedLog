@@ -1,5 +1,3 @@
-.vs/
-bin/
-obj/
-Debug/
-Release/
+.DS_Store
+
+node_modules/
