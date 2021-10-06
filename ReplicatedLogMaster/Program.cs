@@ -34,8 +34,8 @@ namespace ReplicatedLogMaster
             {
                 HttpListenerContext context = m_listener.GetContext();
                 HttpListenerRequest request = context.Request;
-                HttpListenerResponse response = context.Response;                
-               
+                HttpListenerResponse response = context.Response;
+
                 if (request.HttpMethod == "GET")
                 {
                     Console.WriteLine("GET request processing...");
