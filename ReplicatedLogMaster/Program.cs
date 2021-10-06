@@ -61,6 +61,7 @@ namespace ReplicatedLogMaster
                 else if (request.HttpMethod == "POST")
                 {
                     Console.WriteLine("POST request processing...");
+                    Thread.Sleep(5000);
 
                     byte[] buffer = new byte[request.ContentLength64];
                     request.InputStream.Read(buffer, 0, buffer.Length);
