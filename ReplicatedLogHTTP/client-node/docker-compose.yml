@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  slave1:
+    build: .
+    command: ["node", "client.js"]
+    environment:
+      MASTER_HOST: '*'
+      MASTER_PORT: 2100
+    ports:
+      - 2100:2100
