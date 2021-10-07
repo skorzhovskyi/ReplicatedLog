@@ -1,0 +1,20 @@
+const http = require('http');
+const options = {
+  hostname: 'localhost',
+  port: 2100,
+  path: '/',
+  method: 'GET'
+};
+
+const req = http.request(options, res => {
+
+  res.on('data', d => {
+    process.stdout.write(d + `\n`)
+  });
+});
+
+req.on('error', error => {
+  console.error(error)
+});
+
+req.end();
