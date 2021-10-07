@@ -15,20 +15,15 @@ namespace ReplicatedLogMaster
 
         HttpListener m_listener;
 
-        public Server(int port)
+        public Server(string host, int port)
         {
             m_messages = new List<string>();
 
             m_listener = new HttpListener();
-            m_listener.Prefixes.Add("http://localhost:" + port + "/replicated_log/master/");
+            m_listener.Prefixes.Add("http://" + host + ":" + port + "/replicated_log/master/");
             m_listener.Start();
 
-            Console.WriteLine("Server is running, prefixes: ");
-
-            foreach (var pref in m_listener.Prefixes)
-                Console.WriteLine(pref);
-
-            Console.WriteLine();
+            Console.WriteLine("Server is running\n");
 
             while (true)
             {
@@ -105,7 +100,16 @@ namespace ReplicatedLogMaster
     {
         static void Main(string[] args)
         {
-            new Server(2100);
+            string? _host = Environment.GetEnvironmentVariable("MASTER_HOST");
+            string? _port = Environment.GetEnvironmentVariable("MASTER_PORT");
+
+            string host = _host == null ? "localhost" : _host;
+            int port = _port == null ? 2100 : int.Parse(_port);
+
+            Console.WriteLine("Host: " + host);
+            Console.WriteLine("Port: " + port);
+
+            new Server(host, port);
         }
     }
 }
