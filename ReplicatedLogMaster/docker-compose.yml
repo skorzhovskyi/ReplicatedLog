@@ -7,5 +7,7 @@ services:
     environment:
       MASTER_HOST: '*'
       MASTER_PORT: 2100
+      SLAVE1_HOST: 'localhost'
+      SLAVE1_PORT: 2200
     ports:
       - 2100:2100
