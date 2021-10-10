@@ -2,7 +2,7 @@ version: '3'
 
 services:
   rep-log-master:
-    build: .
+    build: ReplicatedLogMaster
     command: ["dotnet", "ReplicatedLogMaster.dll"]
     environment:
       MASTER_HOST: '*'
@@ -15,7 +15,7 @@ services:
       - 2100:2100
 
   rep-log-slave-1:
-    build: .
+    build: ReplicatedLogSecondary1
     command: ["node", "server.js"]
     environment:
       SLAVE1_HOST: '*'
@@ -24,7 +24,7 @@ services:
       - 2201:3000
 
   rep-log-slave-2:
-    build: .
+    build: ReplicatedLogSecondary2
     command: ["python", "service.py"]
     environment:
       SLAVE_HOST: '0.0.0.0'
