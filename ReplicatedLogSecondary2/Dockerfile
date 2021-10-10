@@ -6,6 +6,6 @@ COPY requirements.txt /opt/app/
 
 RUN pip install -r requirements.txt
 
-COPY service.py /opt/app/
+COPY service.py utils.py /opt/app/
 
 EXPOSE 5000
