@@ -5,8 +5,4 @@ node_modules/
 
 bin/
 obj/
-Debug/
-Release/
-
-.idea/
 .vs/

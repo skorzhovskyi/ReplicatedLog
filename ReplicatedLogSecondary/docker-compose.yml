@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  slave1:
+    build: .
+    command: ["node", "server.js"]
+    environment:
+      SLAVE1_HOST: '*'
+      SLAVE1_PORT: 3000
+    ports:
+      - 2200:3000
