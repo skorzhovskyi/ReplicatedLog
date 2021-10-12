@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  rep-log-master:
+    build: ReplicatedLogMaster
+    command: ["dotnet", "ReplicatedLogMaster.dll"]
+    environment:
+      MASTER_HOST: '*'
+      MASTER_PORT: 2100
+      SLAVE1_HOST: 'localhost'
+      SLAVE1_PORT: 2201
+      SLAVE2_HOST: 'localhost'
+      SLAVE2_PORT: 2202
+    ports:
+      - 2100:2100
+
+  rep-log-slave-1:
+    build: ReplicatedLogSecondary1
+    command: ["node", "server.js"]
+    environment:
+      SLAVE1_HOST: '*'
+      SLAVE1_PORT: 3000
+    ports:
+      - 2201:3000
+
+  rep-log-slave-2:
+    build: ReplicatedLogSecondary2
+    command: ["python", "service.py"]
+    environment:
+      SLAVE_HOST: '0.0.0.0'
+      SLAVE_PORT: 5000
+    ports:
+      - 2202:5000
