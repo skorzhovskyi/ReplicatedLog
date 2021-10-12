@@ -7,9 +7,53 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Net.Http;
+using System.Text.Json;
 
 namespace ReplicatedLogMaster
 {
+    class Message
+    {
+        public string message { get; set; }
+
+        public Message() { }
+        public Message(string val)
+        {
+            message = val;             
+        }
+
+        public static Message FromJson(string json)
+        {
+            return new Message(JsonSerializer.Deserialize<Message>(json).message);
+        }
+
+        public string GetJson()
+        {
+            string json = JsonSerializer.Serialize(this);
+            return json;
+        }
+    }
+
+    class Messages
+    {
+        public List<string> messages { get; set; }
+        public Messages() { }
+        public Messages(List<string> val)
+        {
+            messages = val;
+        }
+
+        public static Messages FromJson(string json)
+        {
+            return new Messages(JsonSerializer.Deserialize<Messages>(json).messages);
+        }
+
+        public string GetJson()
+        {
+            string json = JsonSerializer.Serialize(this);
+            return json;
+        }
+    }
+
     class Client
     {
         private HttpClient m_httpClient;
@@ -38,7 +82,7 @@ namespace ReplicatedLogMaster
 
         public bool SendMessage(string msg, Uri uri)
         {
-            HttpContent content = new StringContent(msg);
+            HttpContent content = new StringContent(msg, Encoding.UTF8, "application/json");
             HttpResponseMessage response = m_httpClient.PostAsync(uri, content).Result;
 
             return response.StatusCode == HttpStatusCode.OK;
@@ -80,17 +124,9 @@ namespace ReplicatedLogMaster
                     Console.WriteLine("GET request processing...");
                     Thread.Sleep(5000);
 
-                    byte[] buffer = new byte[GetMessagesSize()];
+                    string json = (new Messages(m_messages)).GetJson();
 
-                    int pos = 0;
-
-                    foreach (var msg in m_messages)
-                    {
-                        Array.Copy(BitConverter.GetBytes(msg.Length), 0, buffer, pos, sizeof(int));
-                        pos += sizeof(int);
-                        Array.Copy(Encoding.ASCII.GetBytes(msg), 0, buffer, pos, msg.Length);
-                        pos += msg.Length;
-                    }
+                    var buffer = Encoding.ASCII.GetBytes(json);
 
                     response.OutputStream.Write(buffer, 0, buffer.Length);
                     response.OutputStream.Close();
@@ -104,7 +140,7 @@ namespace ReplicatedLogMaster
 
                     byte[] buffer = new byte[request.ContentLength64];
                     request.InputStream.Read(buffer, 0, buffer.Length);
-                    string msg = Encoding.UTF8.GetString(buffer);
+                    string msg = Message.FromJson(Encoding.UTF8.GetString(buffer)).message;
 
                     Console.WriteLine("Message received: " + msg);
 
@@ -112,7 +148,7 @@ namespace ReplicatedLogMaster
 
                     request.InputStream.Close();
 
-                    Broadcast(msg);
+                    Broadcast(new Message(msg).GetJson());
 
                     Console.WriteLine("POST request processed");
                 }
@@ -142,16 +178,6 @@ namespace ReplicatedLogMaster
 
             Console.WriteLine("Broadcasting message finished");
         }
-
-        private int GetMessagesSize()
-        {
-            int size = sizeof(int) * m_messages.Count;
-
-            foreach (var msg in m_messages)
-                size += msg.Length;
-
-            return size;
-        }
     }
 
     class Program
@@ -171,22 +197,25 @@ namespace ReplicatedLogMaster
 
             List<Uri> secondaries = new List<Uri>();
 
-            //secondaries.Add(new Uri("http://localhost:2200"));
-
-            while (true)
+            if (_host == null)
+                secondaries.Add(new Uri("http://localhost:2200"));
+            else
             {
-                string? slave_host = Environment.GetEnvironmentVariable("SLAVE" + id + "_HOST");
-                string? slave_port = Environment.GetEnvironmentVariable("SLAVE" + id + "_PORT");
-            
-                if (slave_host == null || slave_port == null)
-                    break;
-            
-                Console.WriteLine("Slave host: " + slave_host);
-                Console.WriteLine("Slave port: " + slave_port);
-            
-                secondaries.Add(new Uri("http://" + slave_host + ":" + slave_port));
-            
-                ++id;
+                while (true)
+                {
+                    string? slave_host = Environment.GetEnvironmentVariable("SLAVE" + id + "_HOST");
+                    string? slave_port = Environment.GetEnvironmentVariable("SLAVE" + id + "_PORT");
+                
+                    if (slave_host == null || slave_port == null)
+                        break;
+                
+                    Console.WriteLine("Slave host: " + slave_host);
+                    Console.WriteLine("Slave port: " + slave_port);
+                
+                    secondaries.Add(new Uri("http://" + slave_host + ":" + slave_port));
+                
+                    ++id;
+                }
             }
 
             new Server(host, port, secondaries);
