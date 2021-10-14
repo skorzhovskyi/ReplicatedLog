@@ -108,7 +108,7 @@ namespace ReplicatedLogMaster
             m_client = new Client();
 
             m_listener = new HttpListener();
-            m_listener.Prefixes.Add("http://" + host + ":" + port + "/replicated_log/master/");
+            m_listener.Prefixes.Add("http://" + host + ":" + port + "/");
             m_listener.Start();
 
             Console.WriteLine("Server is running\n");
@@ -122,7 +122,6 @@ namespace ReplicatedLogMaster
                 if (request.HttpMethod == "GET")
                 {
                     Console.WriteLine("GET request processing...");
-                    Thread.Sleep(5000);
 
                     string json = (new Messages(m_messages)).GetJson();
 
@@ -136,7 +135,6 @@ namespace ReplicatedLogMaster
                 else if (request.HttpMethod == "POST")
                 {
                     Console.WriteLine("POST request processing...");
-                    Thread.Sleep(5000);
 
                     byte[] buffer = new byte[request.ContentLength64];
                     request.InputStream.Read(buffer, 0, buffer.Length);
@@ -174,6 +172,8 @@ namespace ReplicatedLogMaster
             {
                 if (m_client.SendMessage(message, slave))
                     Console.WriteLine("Slave " + slave.ToString() + " - received");
+                else
+                    Console.WriteLine("Slave " + slave.ToString() + " - failed");
             }
 
             Console.WriteLine("Broadcasting message finished");
@@ -184,16 +184,16 @@ namespace ReplicatedLogMaster
     {
         static void Main(string[] args)
         {
+            string? _numOfSlaves = Environment.GetEnvironmentVariable("SLAVES_NUM");
             string? _host = Environment.GetEnvironmentVariable("MASTER_HOST");
             string? _port = Environment.GetEnvironmentVariable("MASTER_PORT");
 
             string host = _host == null ? "localhost" : _host;
             int port = _port == null ? 2100 : int.Parse(_port);
+            int numOfSlaves = _numOfSlaves == null ? 2 : int.Parse(_numOfSlaves);
 
             Console.WriteLine("Host: " + host);
             Console.WriteLine("Port: " + port);
-
-            int id = 1;
 
             List<Uri> secondaries = new List<Uri>();
 
@@ -201,7 +201,7 @@ namespace ReplicatedLogMaster
                 secondaries.Add(new Uri("http://localhost:2200"));
             else
             {
-                while (true)
+                for (int id = 0; id < numOfSlaves; id++)
                 {
                     string? slave_host = Environment.GetEnvironmentVariable("SLAVE" + id + "_HOST");
                     string? slave_port = Environment.GetEnvironmentVariable("SLAVE" + id + "_PORT");
