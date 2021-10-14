@@ -63,15 +63,17 @@ namespace ReplicatedLogMaster
             get => m_httpClient;
         }
 
-        public Client()
+        public Client(int postTimeOut)
         {
             m_httpClient = new HttpClient();
+            m_httpClient.Timeout = TimeSpan.FromMilliseconds(postTimeOut);
         }
 
-        public Client(Uri endpoint)
+        public Client(Uri endpoint, int postTimeOut)
         {
             m_httpClient = new HttpClient();
             m_httpClient.BaseAddress = endpoint;
+            m_httpClient.Timeout = TimeSpan.FromMilliseconds(postTimeOut);
         }
 
         ~Client()
@@ -83,9 +85,18 @@ namespace ReplicatedLogMaster
         public bool SendMessage(string msg, Uri uri)
         {
             HttpContent content = new StringContent(msg, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = m_httpClient.PostAsync(uri, content).Result;
 
-            return response.StatusCode == HttpStatusCode.OK;
+            try
+            {
+                HttpResponseMessage response = m_httpClient.PostAsync(uri, content).Result;
+                return response != null && response.StatusCode == HttpStatusCode.OK;
+            } 
+            catch (AggregateException e)
+            {
+                return false;
+            }
+
+            return false;
         }
     }
 
@@ -99,13 +110,13 @@ namespace ReplicatedLogMaster
 
         Client m_client;
 
-        public Server(string host, int port, List<Uri> secondaries)
+        public Server(string host, int port, List<Uri> secondaries, int broadCastingTimeOut)
         {
             m_secondaries = secondaries;
 
             m_messages = new List<string>();
 
-            m_client = new Client();
+            m_client = new Client(broadCastingTimeOut);
 
             m_listener = new HttpListener();
             m_listener.Prefixes.Add("http://" + host + ":" + port + "/");
@@ -187,10 +198,12 @@ namespace ReplicatedLogMaster
             string? _numOfSlaves = Environment.GetEnvironmentVariable("SLAVES_NUM");
             string? _host = Environment.GetEnvironmentVariable("MASTER_HOST");
             string? _port = Environment.GetEnvironmentVariable("MASTER_PORT");
+            string? _broadCastingTimeOut = Environment.GetEnvironmentVariable("BROADCASTING_TIME_OUT");
 
             string host = _host == null ? "localhost" : _host;
             int port = _port == null ? 2100 : int.Parse(_port);
             int numOfSlaves = _numOfSlaves == null ? 2 : int.Parse(_numOfSlaves);
+            int broadCastingTimeOut = _broadCastingTimeOut == null ? 10000 : int.Parse(_broadCastingTimeOut);
 
             Console.WriteLine("Host: " + host);
             Console.WriteLine("Port: " + port);
@@ -201,7 +214,7 @@ namespace ReplicatedLogMaster
                 secondaries.Add(new Uri("http://localhost:2200"));
             else
             {
-                for (int id = 0; id < numOfSlaves; id++)
+                for (int id = 1; id <= numOfSlaves; id++)
                 {
                     string? slave_host = Environment.GetEnvironmentVariable("SLAVE" + id + "_HOST");
                     string? slave_port = Environment.GetEnvironmentVariable("SLAVE" + id + "_PORT");
@@ -213,12 +226,10 @@ namespace ReplicatedLogMaster
                     Console.WriteLine("Slave port: " + slave_port);
                 
                     secondaries.Add(new Uri("http://" + slave_host + ":" + slave_port));
-                
-                    ++id;
                 }
             }
 
-            new Server(host, port, secondaries);
+            new Server(host, port, secondaries, broadCastingTimeOut);
         }
     }
 }

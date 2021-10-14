@@ -10,12 +10,11 @@ app.use(bodyParser.json());
 var messages = [];
 
 app.post('/', function(req, res) {
-  console.log(res.statusCode + ' Secondary_1 received: ' + req.body.message);
-  setTimeout(function() { 
-    messages.push(req.body.message);
-  }, DELAY);
-
-  res.send(req.body.message);
+	setTimeout(function() {
+		console.log(res.statusCode + ' Secondary_1 received: ' + req.body.message);
+		messages.push(req.body.message);
+		res.send(req.body.message);
+	}, DELAY);
 });
 
 app.get('/', (req, res) => {
