@@ -15,18 +15,20 @@ services:
       - 2100:2100
     networks:
       - rep-log-master-net
-  
+
   rep-log-slave-1:
     build: ReplicatedLogSecondary1
     command: ["node", "server.js"]
     environment:
       SLAVE1_HOST: '*'
+      POST_DELAY: 5000
       SLAVE1_PORT: 3000
     ports:
       - 2201:3000
     networks:
       - rep-log-master-net
-      
+
+
   rep-log-slave-2:
     build: ReplicatedLogSecondary2
     command: ["python", "service.py"]
@@ -37,6 +39,6 @@ services:
       - 2202:5000
     networks:
       - rep-log-master-net
-      
+
 networks:
     rep-log-master-net:
