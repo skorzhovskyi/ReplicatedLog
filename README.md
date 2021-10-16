@@ -23,3 +23,6 @@ run.sh
 
 ## Example of POST request
 <img width="1359" alt="Знімок екрана 2021-10-16 о 21 41 40" src="https://user-images.githubusercontent.com/71091432/137598746-3e05d236-5dc4-425b-b7ad-8a1f31c066eb.png">
+
+## Example of GET request from a Secondary
+<img width="1359" alt="Знімок екрана 2021-10-16 о 21 42 45" src="https://user-images.githubusercontent.com/71091432/137598785-8bf0c396-21e0-46e8-b9f2-bd67e363354b.png">
