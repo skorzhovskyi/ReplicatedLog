@@ -7,6 +7,7 @@ services:
     environment:
       MASTER_HOST: '*'
       MASTER_PORT: 2100
+      SLAVES_NUM: 2
       SLAVE1_HOST: 'rep-log-slave-1'
       SLAVE1_PORT: 3000
       SLAVE2_HOST: 'rep-log-slave-2'
