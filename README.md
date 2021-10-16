@@ -28,4 +28,4 @@ run.sh
 <img width="1359" alt="Знімок екрана 2021-10-16 о 21 42 45" src="https://user-images.githubusercontent.com/71091432/137598785-8bf0c396-21e0-46e8-b9f2-bd67e363354b.png">
 
 ## Example of acknowledgements on Terminal 
-<img width="797" alt="Знімок екрана 2021-10-16 о 21 47 29" src="https://user-images.githubusercontent.com/71091432/137598904-667446ae-3368-4c7a-ab5e-462dd6861162.png">
+<img width="797" alt="Знімок екрана 2021-10-16 о 21 47 29" src="https://user-images.githubusercontent.com/71091432/137598937-45f79e43-9626-4455-af92-351abff9cd81.png">
