@@ -4,15 +4,15 @@
 
 ```
 Master - localhost:2100
-Slave1 - localhost:2201
-Slave2 - localhost:2202 
+Secondary1 - localhost:2201
+Secondary2 - localhost:2202 
 ```
 
 ## Docker-compose variables
 
 ```
-BROADCASTING_TIME_OUT - tells how long Master waits until a slave received a message (20 sec by default)
-POST_DELAY - Slave1 post request delay (10 sec by default)
+BROADCASTING_TIME_OUT - indicates duration Master should wait until secondary receives a message (20 sec by default)
+POST_DELAY - indicates duration of delay for Secondary1 post request (10 sec by default)
 ```
 
 ## Runing
