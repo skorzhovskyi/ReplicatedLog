@@ -21,7 +21,7 @@ POST_DELAY - indicates duration of delay for Secondary1 post request (10 sec by 
 run.sh
 ```
 
-## Example of POST request
+## Example of POST request on Master
 <img width="1359" alt="Знімок екрана 2021-10-16 о 21 41 40" src="https://user-images.githubusercontent.com/71091432/137598746-3e05d236-5dc4-425b-b7ad-8a1f31c066eb.png">
 
 ## Example of GET request from a Secondary
