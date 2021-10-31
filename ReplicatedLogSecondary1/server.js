@@ -2,7 +2,7 @@ const app = require('express')();
 const http = require('http').createServer(app);
 const bodyParser = require('body-parser');
 const port = 3000;
-const DELAY = process.env.POST_DELAY;
+const POST_DELAY_MS = process.env.POST_DELAY * 1000;
 
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
@@ -14,7 +14,7 @@ app.post('/', function(req, res) {
 		console.log(res.statusCode + ' Secondary_1 received: ' + req.body.message);
 		messages.push(req.body.message);
 		res.send(req.body.message);
-	}, DELAY);
+	}, POST_DELAY_MS);
 });
 
 app.get('/', (req, res) => {
