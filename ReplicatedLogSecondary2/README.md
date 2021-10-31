@@ -1,6 +1,6 @@
-# Replicated Log Slave 2
+# Replicated Log Secondary 2
 
-### 🐳 Service
+## 🐳 Service
 
 ```
 $ docker-compose -f docker-compose.yml down
@@ -9,9 +9,9 @@ $ docker-compose -f docker-compose.yml up -d rep-log-slave-2
 $ docker logs replicatedlogsecondary2_rep-log-slave-2_1
 ```
 
-### 💡 Endpoints
+## 💡 Endpoints
 
-#### 1. Add message
+### 1. Append message
 
 ```
 $ SLAVE=http://localhost:2202/
@@ -21,7 +21,7 @@ $ curl -XPOST --header "Content-Type: application/json" -d'{"message": "world"}'
 {"status": "ok"}
 ```
 
-#### 2. Get all messages
+### 2. Get all messages
 
 ```
 $ curl -XGET http://localhost:2202/
