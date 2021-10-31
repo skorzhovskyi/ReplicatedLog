@@ -34,10 +34,6 @@ def get_messages():
 @app.route("/", methods=['POST'])
 def append_message():
 
-    if post_delay > 0:
-        logger.debug(f'Sleep for {post_delay} seconds ...')
-        time.sleep(post_delay)
-
     try:
         request_body = flask.request.get_json()
     except TypeError:
@@ -52,6 +48,10 @@ def append_message():
             'Could not get data from request! '
             'Possible reasons: missing Content-Type in headers.'
         )
+
+    if post_delay > 0:
+        logger.debug(f'Sleep for {post_delay} seconds ...')
+        time.sleep(post_delay)
 
     logger.info(f'Append [message="{message}"] ...')
     messages.put(message)
