@@ -1,5 +1,6 @@
 
 import os
+import time
 import typing as _t
 from queue import Queue
 
@@ -11,6 +12,9 @@ from utils import get_console_logger
 app = flask.Flask(__name__)
 messages = Queue()
 logger = get_console_logger('replicated-log-slave-2')
+
+# Delay in sec for POST requests, default is no delay
+post_delay = os.getenv('POST_DELAY', 0)
 
 
 def _get_error_response(body: _t.Dict) -> flask.Response:
@@ -30,6 +34,11 @@ def get_messages():
 
 @app.route("/", methods=['POST'])
 def append_message():
+
+    if post_delay > 0:
+        logger.debug(f'Sleep for {post_delay} seconds ...')
+        time.sleep(post_delay)
+
     try:
         request_body = flask.request.get_json()
     except TypeError:
