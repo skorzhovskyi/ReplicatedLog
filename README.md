@@ -8,7 +8,7 @@
 | **SECONDARY1**  | `localhost:2201`  |  `GET /` - Get all messages<br> `POST /` - Append message |
 | **SECONDARY2**  | `localhost:2202`  | `GET /` - Get all messages<br> `POST /` - Append message |
 
-## Environment variables
+## 🌳 Environment variables
 
 - `BROADCASTING_TIME_OUT` - indicates duration Master should wait until Secondary receives a message (20 sec by default)
 - `POST_DELAY` - indicates duration of delay for Secondary POST request

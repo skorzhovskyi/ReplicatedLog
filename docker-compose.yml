@@ -18,7 +18,7 @@ services:
     networks:
       - rep-log-master-net
 
-  rep-log-slave-1:
+  rep-log-secondary-1:
     build: ReplicatedLogSecondary1
     command: ["node", "server.js"]
     environment:
@@ -31,7 +31,7 @@ services:
       - rep-log-master-net
 
 
-  rep-log-slave-2:
+  rep-log-secondary-2:
     build: ReplicatedLogSecondary2
     command: ["python", "service.py"]
     environment:
