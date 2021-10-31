@@ -14,7 +14,7 @@ messages = Queue()
 logger = get_console_logger('replicated-log-slave-2')
 
 # Delay in sec for POST requests, default is no delay
-post_delay = os.getenv('POST_DELAY', 0)
+post_delay = int(os.getenv('POST_DELAY', 0))
 
 
 def _get_error_response(body: _t.Dict) -> flask.Response:
