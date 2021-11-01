@@ -7,11 +7,11 @@ services:
     environment:
       MASTER_HOST: '*'
       MASTER_PORT: 2100
-      SLAVES_NUM: 2
-      SLAVE1_HOST: 'rep-log-slave-1'
-      SLAVE1_PORT: 3000
-      SLAVE2_HOST: 'rep-log-slave-2'
-      SLAVE2_PORT: 5000
+      SECONDARIES_NUM: 2
+      SECONDARY1_HOST: 'rep-log-secondary-1'
+      SECONDARY1_PORT: 3000
+      SECONDARY2_HOST: 'rep-log-secondary-2'
+      SECONDARY2_PORT: 5000
       BROADCASTING_TIME_OUT: 20000
     ports:
       - "2100:2100"
@@ -22,8 +22,8 @@ services:
     build: ReplicatedLogSecondary1
     command: ["node", "server.js"]
     environment:
-      SLAVE1_HOST: '*'
-      SLAVE1_PORT: 3000
+      SECONDARY1_HOST: '*'
+      SECONDARY1_PORT: 3000
       POST_DELAY: 10
     ports:
       - "2201:3000"
@@ -35,8 +35,8 @@ services:
     build: ReplicatedLogSecondary2
     command: ["python", "service.py"]
     environment:
-      SLAVE_HOST: '0.0.0.0'
-      SLAVE_PORT: 5000
+      SECONDARY_HOST: '0.0.0.0'
+      SECONDARY_PORT: 5000
       POST_DELAY: 10
     ports:
       - "2202:5000"

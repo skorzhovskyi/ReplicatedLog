@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker-compose -f docker-compose.yml up -d slave1
+docker-compose -f docker-compose.yml up -d secondary1

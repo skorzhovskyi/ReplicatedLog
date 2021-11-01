@@ -261,7 +261,7 @@ namespace ReplicatedLogMaster
     {
         static void Main(string[] args)
         {
-            string? _numOfSlaves = Environment.GetEnvironmentVariable("SLAVES_NUM");
+            string? _numOfSlaves = Environment.GetEnvironmentVariable("SECONDARIES_NUM");
             string? _host = Environment.GetEnvironmentVariable("MASTER_HOST");
             string? _port = Environment.GetEnvironmentVariable("MASTER_PORT");
             string? _broadCastingTimeOut = Environment.GetEnvironmentVariable("BROADCASTING_TIME_OUT");
@@ -285,9 +285,9 @@ namespace ReplicatedLogMaster
             {
                 for (int id = 1; id <= numOfSlaves; id++)
                 {
-                    string? slave_host = Environment.GetEnvironmentVariable("SLAVE" + id + "_HOST");
-                    string? slave_port = Environment.GetEnvironmentVariable("SLAVE" + id + "_PORT");
-
+                    string? slave_host = Environment.GetEnvironmentVariable("SECONDARY" + id + "_HOST");
+                    string? slave_port = Environment.GetEnvironmentVariable("SECONDARY" + id + "_PORT");
+                
                     if (slave_host == null || slave_port == null)
                         break;
 

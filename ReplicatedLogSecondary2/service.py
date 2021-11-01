@@ -10,7 +10,7 @@ from utils import get_console_logger
 
 app = flask.Flask(__name__)
 messages = Queue()
-logger = get_console_logger('replicated-log-slave-2')
+logger = get_console_logger('replicated-log-secondary-2')
 
 # Delay in sec for POST requests, default is no delay
 post_delay = int(os.getenv('POST_DELAY', 0))
@@ -61,8 +61,8 @@ def append_message():
 
 
 def main():
-    host = os.environ['SLAVE_HOST']
-    port = int(os.environ['SLAVE_PORT'])
+    host = os.environ['SECONDARY_HOST']
+    port = int(os.environ['SECONDARY_PORT'])
     app.run(host=host, port=port, debug=False)
 
 
