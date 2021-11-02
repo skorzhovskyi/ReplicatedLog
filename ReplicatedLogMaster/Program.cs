@@ -156,44 +156,51 @@ namespace ReplicatedLogMaster
 
             while (true)
             {
-                HttpListenerContext context = m_listener.GetContext();
-                HttpListenerRequest request = context.Request;
-                HttpListenerResponse response = context.Response;
+                Task<HttpListenerContext> task = m_listener.GetContextAsync();
 
-                if (request.HttpMethod == "GET")
+                task.ContinueWith(_context =>
                 {
-                    Console.WriteLine("GET request processing...");
+                    HttpListenerContext context = _context.Result;
+                    HttpListenerRequest request = context.Request;
+                    HttpListenerResponse response = context.Response;
 
-                    string json = (new Messages(m_messages)).GetJson();
+                    if (request.HttpMethod == "GET")
+                    {
+                        Console.WriteLine("GET request processing...");
 
-                    var buffer = Encoding.ASCII.GetBytes(json);
+                        string json = (new Messages(m_messages)).GetJson();
 
-                    response.OutputStream.Write(buffer, 0, buffer.Length);
-                    response.OutputStream.Close();
+                        var buffer = Encoding.ASCII.GetBytes(json);
 
-                    Console.WriteLine("GET request processed");
-                }
-                else if (request.HttpMethod == "POST")
-                {
-                    Console.WriteLine("POST request processing...");
+                        response.OutputStream.Write(buffer, 0, buffer.Length);
+                        response.OutputStream.Close();
 
-                    byte[] buffer = new byte[request.ContentLength64];
-                    request.InputStream.Read(buffer, 0, buffer.Length);
-                    MessageIn msg = MessageIn.FromJson(Encoding.UTF8.GetString(buffer));
+                        Console.WriteLine("GET request processed");
+                    }
+                    else if (request.HttpMethod == "POST")
+                    {
+                        Console.WriteLine("POST request processing...");
 
-                    Console.WriteLine("Message received: " + msg.message);
+                        byte[] buffer = new byte[request.ContentLength64];
+                        request.InputStream.Read(buffer, 0, buffer.Length);
+                        MessageIn msg = MessageIn.FromJson(Encoding.UTF8.GetString(buffer));
 
-                    m_messages.Add(msg.message);
+                        Console.WriteLine("Message received: " + msg.message);
 
-                    request.InputStream.Close();
+                        m_messages.Add(msg.message);
 
-                    Broadcast(new MessageOut(msg.message).GetJson(), msg.w);
+                        request.InputStream.Close();
 
-                    Console.WriteLine("POST request processed");
-                }
+                        Broadcast(new MessageOut(msg.message).GetJson(), msg.w);
 
-                Console.WriteLine();
-                response.Close();
+                        Console.WriteLine("POST request processed");
+                    }
+
+                    Console.WriteLine();
+                    response.Close();
+                });
+
+                task.Wait();
             }
         }
 
