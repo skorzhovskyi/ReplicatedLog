@@ -1,11 +1,11 @@
 version: '3'
 
 services:
-  rep-log-slave-2:
+  rep-log-secondary-2:
     build: .
     command: ["python", "service.py"]
     environment:
-      SLAVE_HOST: '0.0.0.0'
-      SLAVE_PORT: 5000
+      SECONDARY_HOST: '0.0.0.0'
+      SECONDARY_PORT: 5000
     ports:
       - 2202:5000

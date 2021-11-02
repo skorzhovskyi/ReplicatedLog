@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  slave1:
+  secondary1:
     build: .
     command: ["node", "server.js"]
     environment:
