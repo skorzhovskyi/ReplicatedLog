@@ -247,7 +247,7 @@ namespace ReplicatedLogMaster
                 });
             }
 
-            while (requestsReceived < w && requestsReceived + requestsFailed < m_secondaries.Count)
+            while (requestsReceived < w - 1 && requestsReceived + requestsFailed < m_secondaries.Count)
                 Thread.Sleep(100);
 
             Console.WriteLine("Broadcasting finished");
