@@ -17,7 +17,7 @@ app.post('/', async (req, res) => {
 	}, POST_DELAY_MS);
 });
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   console.log("All messages: " + messages);
   res.send({messages: messages});
 })
