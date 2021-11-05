@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 
 var messages = [];
 
-app.post('/', function(req, res) {
+app.post('/', async (req, res) => {
 	setTimeout(function() {
 		console.log(res.statusCode + ' Secondary_1 received: ' + req.body.message);
 		messages.push(req.body.message);
