@@ -135,19 +135,28 @@ namespace ReplicatedLogMaster
 
     class Server
     {
-        private const int RETRY_DELAY = 5;
-
         ConcurrentBag<string> m_messages;
 
         List<Uri> m_secondaries;
+        List<bool> m_secondariesStatus;
 
         HttpListener m_listener;
 
         MessageSender m_sender;
 
-        public Server(string host, int port, int retryTimeout, List<Uri> secondaries, int broadCastingTimeOut)
+        int m_retryDelay;
+        int m_quorum;
+
+        public Server(string host, int port, int retryTimeout, List<Uri> secondaries, int broadCastingTimeOut, int retryDelay, int pingDelay, int quorum)
         {
+            m_retryDelay = retryDelay;
+            m_quorum = quorum;
+
             m_secondaries = secondaries;
+            m_secondariesStatus = new();
+
+            foreach (var s in m_secondaries)
+                m_secondariesStatus.Add(true);
 
             m_messages = new ConcurrentBag<string>();
 
@@ -158,6 +167,17 @@ namespace ReplicatedLogMaster
             m_listener.Start();
 
             Console.WriteLine("Server is running\n");
+
+            var pingTask = new Task(() =>
+            {
+                while (true)
+                {
+                    Ping();
+                    Thread.Sleep(pingDelay);
+                }
+            });
+
+            pingTask.Start();
 
             while (true)
             {
@@ -186,21 +206,26 @@ namespace ReplicatedLogMaster
                     {
                         Console.WriteLine("POST request processing...");
 
-                        byte[] buffer = new byte[request.ContentLength64];
-                        request.InputStream.Read(buffer, 0, buffer.Length);
-                        MessageIn msg = MessageIn.FromJson(Encoding.UTF8.GetString(buffer));
+                        if (IsQuorum())
+                        {
+                            byte[] buffer = new byte[request.ContentLength64];
+                            request.InputStream.Read(buffer, 0, buffer.Length);
+                            MessageIn msg = MessageIn.FromJson(Encoding.UTF8.GetString(buffer));
 
-                        Console.WriteLine("Message received: " + msg.message);
+                            Console.WriteLine("Message received: " + msg.message);
 
-                        m_messages.Add(msg.message);
+                            m_messages.Add(msg.message);
 
-                        request.InputStream.Close();
+                            request.InputStream.Close();
 
-                        int msgId = m_messages.Count;
+                            int msgId = m_messages.Count;
 
-                        Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout);
+                            Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout);
 
-                        Console.WriteLine("POST request processed");
+                            Console.WriteLine("POST request processed");
+                        }
+                        else
+                            Console.WriteLine("No quorum");
                     }
 
                     Console.WriteLine();
@@ -216,6 +241,48 @@ namespace ReplicatedLogMaster
             if (m_listener != null)
             {
                 m_listener.Stop();
+            }
+        }
+
+        bool IsQuorum()
+        {
+            return m_secondariesStatus.Count(x => x) >= m_quorum;
+        }
+
+        private void Ping(Uri uri, int secondaryId)
+        {
+            string message = "ping";
+            var task = m_sender.SendMessageAsync(message, uri);
+
+            task.ContinueWith(result =>
+            {
+                try
+                {
+                    if (result.Result)
+                    {
+                        if (!m_secondariesStatus[secondaryId])
+                            Console.WriteLine("Slave " + uri.ToString() + " - available");
+                        m_secondariesStatus[secondaryId] = true;
+                        return;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
+                if (m_secondariesStatus[secondaryId])
+                    Console.WriteLine("Slave " + uri.ToString() + " - unavailable");
+
+                m_secondariesStatus[secondaryId] = false;
+            });
+        }
+
+        private void Ping()
+        {
+            for (int i = 0; i < m_secondaries.Count; i++)
+            {
+                Uri uri = new Uri(m_secondaries[i], "status");
+                Ping(uri, i);
             }
         }
 
@@ -248,8 +315,8 @@ namespace ReplicatedLogMaster
                 {
                     if (timer.Enabled)
                     {
-                        Console.WriteLine("Retry in " + RETRY_DELAY + " sec...");
-                        Thread.Sleep(RETRY_DELAY * 1000);
+                        Console.WriteLine("Retry in " + m_retryDelay + " sec...");
+                        Thread.Sleep(m_retryDelay);
                     }
 
                     if (timer.Enabled)
@@ -294,7 +361,7 @@ namespace ReplicatedLogMaster
                 }
                 else
                 {
-                    throw; 
+                    throw;
                 }
             }
             finally
@@ -316,12 +383,18 @@ namespace ReplicatedLogMaster
             string? _port = Environment.GetEnvironmentVariable("MASTER_PORT");
             string? _broadCastingTimeOut = Environment.GetEnvironmentVariable("BROADCASTING_TIME_OUT");
             string? _retryTimeout = Environment.GetEnvironmentVariable("RETRY_TIME_OUT");
+            string? _pingDelay = Environment.GetEnvironmentVariable("PING_DELAY");
+            string? _retryDelay = Environment.GetEnvironmentVariable("RETRY_DELAY");
+            string? _quorum = Environment.GetEnvironmentVariable("QUORUM");
 
             string host = _host == null ? "localhost" : _host;
             int port = _port == null ? 2100 : int.Parse(_port);
             int numOfSlaves = _numOfSlaves == null ? 2 : int.Parse(_numOfSlaves);
             int broadCastingTimeOut = _broadCastingTimeOut == null ? 20000 : int.Parse(_broadCastingTimeOut) * 1000;
-            int retryTimeout = _retryTimeout == null || int.Parse(_retryTimeout) == -1 ? 3600000 : int.Parse(_retryTimeout) * 1000;
+            int retryTimeout = _retryTimeout == null ? 30000 : int.Parse(_retryTimeout) * 1000;
+            int pingDelay = _pingDelay == null ? 5000 : int.Parse(_pingDelay) * 1000;
+            int retryDelay = _retryDelay == null ? 5000 : int.Parse(_pingDelay) * 1000;
+            int quorum = _quorum == null ? 0 : int.Parse(_quorum);
 
             Console.WriteLine("Host: " + host);
             Console.WriteLine("Port: " + port);
@@ -350,7 +423,7 @@ namespace ReplicatedLogMaster
                 }
             }
 
-            new Server(host, port, retryTimeout, secondaries, broadCastingTimeOut);
+            new Server(host, port, retryTimeout, secondaries, broadCastingTimeOut, retryDelay, pingDelay, quorum);
         }
     }
 }
