@@ -14,7 +14,6 @@ from utils import get_console_logger
 class ResponseStatus(Enum):
     error = 'error'
     ok = 'ok'
-    not_ready = 'not_ready'
     already_exists = 'already_exists'
 
 
@@ -51,19 +50,27 @@ def get_error_response(msg: str) -> flask.Response:
     return get_response(status=ResponseStatus.error, msg=msg)
 
 
-def all_messages_arrived() -> bool:
-    """Check if all messages has arrived"""
+def trim_messages() -> _t.Generator[str, None, None]:
+    """Return messages till the end or the first missing"""
     with messages_lock:
 
-        num_messages = len(messages)
-        if num_messages == 0:
-            # It is okay if there no messages yet
-            return True
+        # Ordering
+        # NOTE: Here unimportant, but this is not memory efficient (to create the copy of all messages)
+        #       Using list for ready messages and dict for not ready messages will be more efficient
+        sorted_messages = sorted(messages.items())
+        # Python dict ensures, that messages are sorted as how they were inserted,
+        # and this may not be their natural order
 
-        min_message_id = min(messages)
-        max_message_id = max(messages)
+        prev_message_id = None
+        for message_id, message in sorted_messages:
 
-        return num_messages == max_message_id - min_message_id + 1
+            if prev_message_id is not None and message_id != prev_message_id + 1:
+                logger.info(f'Stop at message with [id={message_id}]')
+                break
+
+            yield message
+
+            prev_message_id = message_id
 
 
 @app.route("/health", methods=['GET'])
@@ -74,17 +81,7 @@ def check_health():
 @app.route("/", methods=['GET'])
 def get_messages():
     logger.info('Get all messages ...')
-
-    with messages_lock:
-
-        if not all_messages_arrived():
-            return get_response(status=ResponseStatus.not_ready, msg='Not all of the messages has arrived!')
-
-        # Ordering
-        sorted_messages = [message for _, message in sorted(messages.items())]
-        # Python dict ensures, that messages are sorted as how they were inserted,
-        # and this may not be their true order
-
+    sorted_messages = list(trim_messages())
     logger.info(f'Found {len(sorted_messages)} messages.')
 
     return get_response(status=ResponseStatus.ok, messages=sorted_messages)
