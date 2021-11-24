@@ -43,7 +43,16 @@ def get_error_response(msg: str) -> flask.Response:
 @app.route("/", methods=['GET'])
 def get_messages():
     logger.info('Get all messages ...')
-    return get_response(status='ok', messages=list(messages.values()))
+
+    with messages_lock:
+        # Ordering
+        sorted_messages = [message for _, message in sorted(messages.items())]
+        # Python dict ensures, that messages are sorted as how they were inserted,
+        # and this may not be their true order
+
+    logger.info(f'Found {len(sorted_messages)} messages.')
+
+    return get_response(status='ok', messages=sorted_messages)
 
 
 @app.route("/", methods=['POST'])
