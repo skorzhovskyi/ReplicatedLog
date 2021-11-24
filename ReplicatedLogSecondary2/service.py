@@ -40,11 +40,24 @@ def get_error_response(msg: str) -> flask.Response:
     return get_response(status='error', msg=msg)
 
 
+def all_messages_arrived() -> bool:
+    """Check if all messages has arrived"""
+    with messages_lock:
+        num_messages = len(messages)
+        min_message_id = min(messages)
+        max_message_id = max(messages)
+        return num_messages == max_message_id - min_message_id
+
+
 @app.route("/", methods=['GET'])
 def get_messages():
     logger.info('Get all messages ...')
 
     with messages_lock:
+
+        if not all_messages_arrived():
+            return get_response(status='not_ready', info='Not all of the messages has arrived!')
+
         # Ordering
         sorted_messages = [message for _, message in sorted(messages.items())]
         # Python dict ensures, that messages are sorted as how they were inserted,
