@@ -20,7 +20,7 @@ class ResponseStatus(Enum):
 
 service_name = 'replicated-log-secondary-2'
 
-app: _t.Optional[flask.Flask] = None
+app = flask.Flask(service_name)
 logger: _t.Optional[logging.Logger] = None
 
 # Mapping from message id into message text, the insert order of messages is preserved
@@ -124,9 +124,7 @@ def append_message():
 
 
 def run_app() -> None:
-    global app, post_delay, logger
-
-    app = flask.Flask(service_name)
+    global post_delay, logger
 
     host = os.environ['SECONDARY_HOST']
     port = int(os.environ['SECONDARY_PORT'])
