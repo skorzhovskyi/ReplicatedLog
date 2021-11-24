@@ -59,7 +59,7 @@ def all_messages_arrived() -> bool:
         return num_messages == max_message_id - min_message_id
 
 
-@app.route("/health", methods='GET')
+@app.route("/health", methods=['GET'])
 def check_health():
     return get_response(status=ResponseStatus.ok)
 
