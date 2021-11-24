@@ -1,4 +1,5 @@
 
+import logging
 import os
 import time
 from queue import Queue
@@ -9,8 +10,9 @@ from utils import get_console_logger
 
 
 app = flask.Flask(__name__)
+logger = get_console_logger('replicated-log-secondary-2', level=logging.DEBUG)
+
 messages = Queue()
-logger = get_console_logger('replicated-log-secondary-2')
 
 # Delay in sec for POST requests, default is no delay
 post_delay = int(os.getenv('POST_DELAY', 0))
