@@ -40,6 +40,7 @@ def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs)
         if status == ResponseStatus.error:
             logger.exception(msg)
         response['message'] = msg
+
     # TODO: Print endpoint and method
     logger.debug(f'Response: {response}')
 
@@ -102,7 +103,7 @@ def append_message():
     except KeyError:
         return get_error_response('Not found "message" in input json!')
     except TypeError:
-        return get_error_response('Could not get data from request! Possible reasons: missing Content-Type in headers.')
+        return get_error_response('Could not get data from request! Possible reasons: missing Content-Type in headers')
 
     try:
         message_id = int(request_body['id'])
@@ -112,14 +113,14 @@ def append_message():
         return get_error_response('Could not parse field "id" from input json!')
 
     if post_delay > 0:
-        logger.debug(f'[id={message_id}] Sleep for {post_delay} seconds ...')
+        logger.info(f'[id={message_id}] Sleep for {post_delay} seconds ...')
         time.sleep(post_delay)
 
     with messages_lock:
 
         # Deduplication
         if message_id in messages:
-            logger.info(f'[id={message_id}] Message with such id already exists!')
+            logger.warning(f'[id={message_id}] Message with such id already exists!')
             return get_response(status=ResponseStatus.already_exists, message_id=message_id)
 
         logger.info(f'[id={message_id}] Add new message ...')
