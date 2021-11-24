@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Net.Http;
 using System.Text.Json;
+using System.Collections.Concurrent;
 
 namespace ReplicatedLogMaster
 {
@@ -38,16 +39,18 @@ namespace ReplicatedLogMaster
     class MessageOut
     {
         public string message { get; set; }
+        public int id { get; set; }
 
         public MessageOut() { }
-        public MessageOut(string val)
+        public MessageOut(string val, int _id)
         {
             message = val;
+            id = _id;
         }
 
         public static MessageOut FromJson(string json)
         {
-            return new MessageOut(JsonSerializer.Deserialize<MessageOut>(json).message);
+            return JsonSerializer.Deserialize<MessageOut>(json);
         }
 
         public string GetJson()
@@ -132,7 +135,9 @@ namespace ReplicatedLogMaster
 
     class Server
     {
-        List<string> m_messages;
+        private const int RETRY_DELAY = 5;
+
+        ConcurrentBag<string> m_messages;
 
         List<Uri> m_secondaries;
 
@@ -140,11 +145,11 @@ namespace ReplicatedLogMaster
 
         MessageSender m_sender;
 
-        public Server(string host, int port, List<Uri> secondaries, int broadCastingTimeOut)
+        public Server(string host, int port, int retryTimeout, List<Uri> secondaries, int broadCastingTimeOut)
         {
             m_secondaries = secondaries;
 
-            m_messages = new List<string>();
+            m_messages = new ConcurrentBag<string>();
 
             m_sender = new MessageSender(broadCastingTimeOut);
 
@@ -168,7 +173,7 @@ namespace ReplicatedLogMaster
                     {
                         Console.WriteLine("GET request processing...");
 
-                        string json = (new Messages(m_messages)).GetJson();
+                        string json = (new Messages(m_messages.ToList())).GetJson();
 
                         var buffer = Encoding.ASCII.GetBytes(json);
 
@@ -191,7 +196,9 @@ namespace ReplicatedLogMaster
 
                         request.InputStream.Close();
 
-                        Broadcast(new MessageOut(msg.message).GetJson(), msg.w);
+                        int msgId = m_messages.Count;
+
+                        Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout);
 
                         Console.WriteLine("POST request processed");
                     }
@@ -212,48 +219,91 @@ namespace ReplicatedLogMaster
             }
         }
 
-        private void Broadcast(string message, int w)
+        private void SendMessage(string message, int id, Uri uri, CountdownEvent cde, System.Timers.Timer timer, bool retry = false)
         {
+            var task = m_sender.SendMessageAsync(message, uri);
+
+            task.ContinueWith(result =>
+            {
+                try
+                {
+                    if (result.Result)
+                    {
+                        Console.WriteLine("Slave " + uri.ToString() + " - received");
+
+                        if (!cde.IsSet)
+                            cde.Signal();
+
+                        return;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
+                if (!retry || timer.Enabled)
+                    Console.WriteLine("Slave " + uri.ToString() + " - failed");
+
+                if (retry)
+                {
+                    if (timer.Enabled)
+                    {
+                        Console.WriteLine("Retry in " + RETRY_DELAY + " sec...");
+                        Thread.Sleep(RETRY_DELAY * 1000);
+                    }
+
+                    if (timer.Enabled)
+                        SendMessage(message, id, uri, cde, timer, retry);
+                }
+
+            });
+        }
+
+        private void Broadcast(string message, int id, int w, int retryTimeout)
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+
+            System.Timers.Timer timer = new(retryTimeout)
+            {
+                AutoReset = false
+            };
+
+            timer.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) =>
+            {
+                cts.Cancel();
+            };
+
+            timer.Start();
+
             Console.WriteLine("Broadcasting message started");
 
-            int requestsReceived = 0;
-            int requestsFailed = 0;
+            var cde = new CountdownEvent(w - 1);
 
             foreach (var s in m_secondaries)
-            {
-                Uri slave = s;
-                var task = m_sender.SendMessageAsync(message, slave);
+                SendMessage(message, id, s, cde, timer, true);
 
-                task.ContinueWith(result =>
+            try
+            {
+                cde.Wait(cts.Token);
+            }
+            catch (OperationCanceledException oce)
+            {
+                if (oce.CancellationToken == cts.Token)
                 {
-                    try
-                    {
-                        if (result.Result)
-                        {
-                            Console.WriteLine("Slave " + slave.ToString() + " - received");
-                            Interlocked.Increment(ref requestsReceived);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Slave " + slave.ToString() + " - failed");
-                            Interlocked.Increment(ref requestsFailed);
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Slave " + slave.ToString() + " - failed");
-                        Interlocked.Increment(ref requestsFailed);
-                    }
-                });
+                    Console.WriteLine("Retry timeout");
+                }
+                else
+                {
+                    throw; 
+                }
+            }
+            finally
+            {
+                cde.Dispose();
+                cts.Dispose();
             }
 
-            while (requestsReceived < w - 1 && requestsReceived + requestsFailed < m_secondaries.Count)
-                Thread.Sleep(100);
-
             Console.WriteLine("Broadcasting finished");
-            Console.WriteLine("{0} secondaries received the message", requestsReceived);
-            Console.WriteLine("{0} secondaries failed to receive the message", requestsFailed);
-            Console.WriteLine("{0} secondaries are in the progress of receiving the message", m_secondaries.Count - requestsFailed - requestsReceived);
         }
     }
 
@@ -265,11 +315,13 @@ namespace ReplicatedLogMaster
             string? _host = Environment.GetEnvironmentVariable("MASTER_HOST");
             string? _port = Environment.GetEnvironmentVariable("MASTER_PORT");
             string? _broadCastingTimeOut = Environment.GetEnvironmentVariable("BROADCASTING_TIME_OUT");
+            string? _retryTimeout = Environment.GetEnvironmentVariable("RETRY_TIME_OUT");
 
             string host = _host == null ? "localhost" : _host;
             int port = _port == null ? 2100 : int.Parse(_port);
             int numOfSlaves = _numOfSlaves == null ? 2 : int.Parse(_numOfSlaves);
-            int broadCastingTimeOut = _broadCastingTimeOut == null ? 20000 : int.Parse(_broadCastingTimeOut);
+            int broadCastingTimeOut = _broadCastingTimeOut == null ? 20000 : int.Parse(_broadCastingTimeOut) * 1000;
+            int retryTimeout = _retryTimeout == null || int.Parse(_retryTimeout) == -1 ? 3600000 : int.Parse(_retryTimeout) * 1000;
 
             Console.WriteLine("Host: " + host);
             Console.WriteLine("Port: " + port);
@@ -287,7 +339,7 @@ namespace ReplicatedLogMaster
                 {
                     string? slave_host = Environment.GetEnvironmentVariable("SECONDARY" + id + "_HOST");
                     string? slave_port = Environment.GetEnvironmentVariable("SECONDARY" + id + "_PORT");
-                
+
                     if (slave_host == null || slave_port == null)
                         break;
 
@@ -298,7 +350,7 @@ namespace ReplicatedLogMaster
                 }
             }
 
-            new Server(host, port, secondaries, broadCastingTimeOut);
+            new Server(host, port, retryTimeout, secondaries, broadCastingTimeOut);
         }
     }
 }
