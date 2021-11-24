@@ -32,7 +32,7 @@ $ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 3, "message": "third"}
 {"status": "ok"}
 
 $ curl -XGET ${SECONDARY}/
-{"status": "not_ready", "message": "Not all of the messages has arrived!"}
+{"status": "ok", messages": ["first"]}
 
 $ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 2, "message": "second"}'
 {"status": "ok"}
