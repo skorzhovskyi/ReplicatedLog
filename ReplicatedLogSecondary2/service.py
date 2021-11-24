@@ -18,8 +18,10 @@ class ResponseStatus(Enum):
     already_exists = 'already_exists'
 
 
-app = flask.Flask(__name__)
-logger = get_console_logger('replicated-log-secondary-2', level=logging.DEBUG)
+service_name = 'replicated-log-secondary-2'
+
+app: _t.Optional[flask.Flask] = None
+logger: _t.Optional[logging.Logger] = None
 
 # Mapping from message id into message text, the insert order of messages is preserved
 messages: _t.Dict[int, str] = {}
@@ -28,7 +30,7 @@ messages: _t.Dict[int, str] = {}
 messages_lock = RLock()
 
 # Delay in sec for POST requests, default is no delay
-post_delay = int(os.getenv('POST_DELAY', 0))
+post_delay: _t.Optional[int] = None
 
 
 def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
@@ -121,10 +123,23 @@ def append_message():
     return flask.jsonify({'status': 'ok'})
 
 
-def main():
+def run_app() -> None:
+    global app, post_delay, logger
+
+    app = flask.Flask(service_name)
+
     host = os.environ['SECONDARY_HOST']
     port = int(os.environ['SECONDARY_PORT'])
+    post_delay = int(os.getenv('POST_DELAY', 0))
+
     app.run(host=host, port=port, debug=False)
+
+
+def main() -> None:
+    global logger
+
+    logger = get_console_logger(service_name, level=logging.DEBUG)
+    run_app()
 
 
 if __name__ == '__main__':
