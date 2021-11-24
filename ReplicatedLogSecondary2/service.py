@@ -2,7 +2,8 @@
 import logging
 import os
 import time
-from queue import Queue
+import typing as _t
+from threading import RLock
 
 import flask
 
@@ -12,7 +13,11 @@ from utils import get_console_logger
 app = flask.Flask(__name__)
 logger = get_console_logger('replicated-log-secondary-2', level=logging.DEBUG)
 
-messages = Queue()
+# Mapping from message id into message text, the insert order of messages is preserved
+messages: _t.Dict[int, str] = {}
+# Using lock on messages makes sure they are safe across multiple threads
+# NOTE: Can be acquired multiple times by the same thread
+messages_lock = RLock()
 
 # Delay in sec for POST requests, default is no delay
 post_delay = int(os.getenv('POST_DELAY', 0))
@@ -51,13 +56,22 @@ def append_message():
             'Possible reasons: missing Content-Type in headers.'
         )
 
+    message_id = 1
+
     if post_delay > 0:
         logger.debug(f'Sleep for {post_delay} seconds ...')
         time.sleep(post_delay)
 
-    logger.info(f'Append [message="{message}"] ...')
-    messages.put(message)
-    logger.info(f'There are {messages.qsize()} messages in queue.')
+    with messages_lock:
+
+        # Deduplication
+        if message_id in messages:
+            logger.info(f'[id={message_id}] Message with such id already exists!')
+            return flask.jsonify(dict(status='already_exists', message_id=message_id))
+
+        logger.info(f'[id={message_id}] Add new message ...')
+        messages[message_id] = message
+        logger.info(f'There are {len(messages)} messages in queue.')
 
     return flask.jsonify({'status': 'ok'})
 
