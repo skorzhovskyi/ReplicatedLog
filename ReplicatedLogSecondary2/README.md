@@ -18,34 +18,25 @@ $ docker logs replicatedlogsecondary2_rep-log-secondary-2_1
 
 ## ✨ Endpoints
 
-### 0. Health check
-
 ```
-$ SECONDARY=http://localhost:2202/
+$ SECONDARY=http://localhost:2202
+$ HEADERS="Content-Type: application/json"
+
 $ curl -XGET ${SECONDARY}/health
 {"status": "ok"}
-```
 
-### 1. Append message
-
-```
-$ HEADERS="--header 'Content-Type: application/json'"
-
-$ curl -XPOST ${HEADERS} -d'{"message": "hello"}' ${SECONDARY}/
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 1, "message": "first"}'
 {"status": "ok"}
 
-$ curl -XPOST ${HEADERS} -d'{"message": "world"}' ${SECONDARY}/
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 3, "message": "third"}'
 {"status": "ok"}
-```
 
-### 2. Get all messages
-
-```
 $ curl -XGET ${SECONDARY}/
-{
-  "messages": [
-    "hello",
-    "world"
-  ]
-}
+{"status": "not_ready", "message": "Not all of the messages has arrived!"}
+
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 2, "message": "second"}'
+{"status": "ok"}
+
+$ curl -XGET ${SECONDARY}/
+{"status": "ok", messages": ["first", "second", "third"]}
 ```
