@@ -3,11 +3,19 @@ import logging
 import os
 import time
 import typing as _t
+from enum import Enum
 from threading import RLock
 
 import flask
 
 from utils import get_console_logger
+
+
+class ResponseStatus(Enum):
+    error = 'error'
+    ok = 'ok'
+    not_ready = 'not_ready'
+    already_exists = 'already_exists'
 
 
 app = flask.Flask(__name__)
@@ -23,11 +31,11 @@ messages_lock = RLock()
 post_delay = int(os.getenv('POST_DELAY', 0))
 
 
-def get_response(status: str, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
+def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
     """Log error response with stacktrace before return"""
-    response = dict(status=status, **kwargs)
+    response = dict(status=status.value, **kwargs)
     if msg is not None:
-        if status == 'error':
+        if status == ResponseStatus.error:
             logger.exception(msg)
         response['message'] = msg
     # TODO: Print endpoint and method
@@ -37,7 +45,7 @@ def get_response(status: str, msg: _t.Optional[str] = None, **kwargs) -> flask.R
 
 
 def get_error_response(msg: str) -> flask.Response:
-    return get_response(status='error', msg=msg)
+    return get_response(status=ResponseStatus.error, msg=msg)
 
 
 def all_messages_arrived() -> bool:
@@ -51,7 +59,7 @@ def all_messages_arrived() -> bool:
 
 @app.route("/health", methods='GET')
 def check_health():
-    return get_response(status='ok')
+    return get_response(status=ResponseStatus.ok)
 
 
 @app.route("/", methods=['GET'])
@@ -61,7 +69,7 @@ def get_messages():
     with messages_lock:
 
         if not all_messages_arrived():
-            return get_response(status='not_ready', info='Not all of the messages has arrived!')
+            return get_response(status=ResponseStatus.not_ready, info='Not all of the messages has arrived!')
 
         # Ordering
         sorted_messages = [message for _, message in sorted(messages.items())]
@@ -70,7 +78,7 @@ def get_messages():
 
     logger.info(f'Found {len(sorted_messages)} messages.')
 
-    return get_response(status='ok', messages=sorted_messages)
+    return get_response(status=ResponseStatus.ok, messages=sorted_messages)
 
 
 @app.route("/", methods=['POST'])
@@ -104,7 +112,7 @@ def append_message():
         # Deduplication
         if message_id in messages:
             logger.info(f'[id={message_id}] Message with such id already exists!')
-            return get_response(status='already_exists', message_id=message_id)
+            return get_response(status=ResponseStatus.already_exists, message_id=message_id)
 
         logger.info(f'[id={message_id}] Add new message ...')
         messages[message_id] = message
