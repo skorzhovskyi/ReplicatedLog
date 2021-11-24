@@ -23,19 +23,27 @@ messages_lock = RLock()
 post_delay = int(os.getenv('POST_DELAY', 0))
 
 
-def _get_error_response(msg: str) -> flask.Response:
+def get_response(status: str, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
     """Log error response with stacktrace before return"""
-    logger.exception(msg)
-    return flask.jsonify({'status': 'error', 'error': msg})
+    response = dict(status=status, **kwargs)
+    if msg is not None:
+        if status == 'error':
+            logger.exception(msg)
+        response['message'] = msg
+    # TODO: Print endpoint and method
+    logger.debug(f'Response: {response}')
+
+    return flask.jsonify(response)
+
+
+def get_error_response(msg: str) -> flask.Response:
+    return get_response(status='error', msg=msg)
 
 
 @app.route("/", methods=['GET'])
 def get_messages():
     logger.info('Get all messages ...')
-    response = {'status': 'ok', 'messages': [message for message in messages.queue]}
-    logger.info(f'There are {messages.qsize()} messages in queue.')
-
-    return flask.jsonify(response)
+    return get_response(status='ok', messages=list(messages.values()))
 
 
 @app.route("/", methods=['POST'])
@@ -44,14 +52,14 @@ def append_message():
     try:
         request_body = flask.request.get_json()
     except TypeError:
-        return _get_error_response('Could not parse input json!')
+        return get_error_response(msg='Could not parse input json!')
 
     try:
         message = request_body['message']
     except KeyError:
-        return _get_error_response('Not found "message" in input json!')
+        return get_error_response('Not found "message" in input json!')
     except TypeError:
-        return _get_error_response(
+        return get_error_response(
             'Could not get data from request! '
             'Possible reasons: missing Content-Type in headers.'
         )
@@ -59,9 +67,9 @@ def append_message():
     try:
         message_id = int(request_body['id'])
     except KeyError:
-        return _get_error_response('Not found field "id" inside input json!')
+        return get_error_response('Not found field "id" inside input json!')
     except ValueError:
-        return _get_error_response('Could not parse field "id" from input json!')
+        return get_error_response('Could not parse field "id" from input json!')
 
     if post_delay > 0:
         logger.debug(f'Sleep for {post_delay} seconds ...')
@@ -72,7 +80,7 @@ def append_message():
         # Deduplication
         if message_id in messages:
             logger.info(f'[id={message_id}] Message with such id already exists!')
-            return flask.jsonify(dict(status='already_exists', message_id=message_id))
+            return get_response(status='already_exists', message_id=message_id)
 
         logger.info(f'[id={message_id}] Add new message ...')
         messages[message_id] = message
