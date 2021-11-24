@@ -56,10 +56,10 @@ def trim_messages() -> _t.Generator[str, None, None]:
 
         # Ordering
         # NOTE: Here unimportant, but this is not memory efficient (to create the copy of all messages)
-        #       Using list for ready messages and dict for not ready messages will be more efficient
+        #       Using list for ready messages and dict for unready will be more efficient
         sorted_messages = sorted(messages.items())
-        # Python dict ensures, that messages are sorted as how they were inserted,
-        # and this may not be their natural order
+        # NOTE: Python dict ensures, that messages are sorted as how they were inserted,
+        #       and this may not be their natural order
 
         prev_message_id = None
         for message_id, message in sorted_messages:
