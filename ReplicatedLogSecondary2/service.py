@@ -86,10 +86,7 @@ def append_message():
     except KeyError:
         return get_error_response('Not found "message" in input json!')
     except TypeError:
-        return get_error_response(
-            'Could not get data from request! '
-            'Possible reasons: missing Content-Type in headers.'
-        )
+        return get_error_response('Could not get data from request! Possible reasons: missing Content-Type in headers.')
 
     try:
         message_id = int(request_body['id'])
@@ -99,7 +96,7 @@ def append_message():
         return get_error_response('Could not parse field "id" from input json!')
 
     if post_delay > 0:
-        logger.debug(f'Sleep for {post_delay} seconds ...')
+        logger.debug(f'[id={message_id}] Sleep for {post_delay} seconds ...')
         time.sleep(post_delay)
 
     with messages_lock:
