@@ -56,7 +56,12 @@ def append_message():
             'Possible reasons: missing Content-Type in headers.'
         )
 
-    message_id = 1
+    try:
+        message_id = int(request_body['id'])
+    except KeyError:
+        return _get_error_response('Not found field "id" inside input json!')
+    except ValueError:
+        return _get_error_response('Could not parse field "id" from input json!')
 
     if post_delay > 0:
         logger.debug(f'Sleep for {post_delay} seconds ...')
