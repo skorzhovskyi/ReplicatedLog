@@ -53,9 +53,15 @@ def get_error_response(msg: str) -> flask.Response:
 def all_messages_arrived() -> bool:
     """Check if all messages has arrived"""
     with messages_lock:
+
         num_messages = len(messages)
+        if num_messages == 0:
+            # It is okay if there no messages yet
+            return True
+
         min_message_id = min(messages)
         max_message_id = max(messages)
+
         return num_messages == max_message_id - min_message_id
 
 
