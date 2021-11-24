@@ -127,8 +127,7 @@ namespace ReplicatedLogMaster
 
         private void Ping(Uri uri, int secondaryId)
         {
-            string message = "ping";
-            var task = m_sender.SendMessageAsync(message, uri);
+            var task = m_sender.GetAsync(uri);
 
             task.ContinueWith(result =>
             {
@@ -157,7 +156,7 @@ namespace ReplicatedLogMaster
         {
             for (int i = 0; i < m_secondaries.Count; i++)
             {
-                Uri uri = new Uri(m_secondaries[i], "status");
+                Uri uri = new Uri(m_secondaries[i], "health");
                 Ping(uri, i);
             }
         }

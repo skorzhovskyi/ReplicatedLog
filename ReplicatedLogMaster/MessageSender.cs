@@ -56,5 +56,11 @@ namespace ReplicatedLogMaster
             HttpResponseMessage response = await m_httpClient.PostAsync(uri, content);
             return response != null && response.StatusCode == HttpStatusCode.OK;
         }
+
+        public async Task<bool> GetAsync(Uri uri)
+        {
+            HttpResponseMessage response = await m_httpClient.GetAsync(uri);
+            return response != null && response.StatusCode == HttpStatusCode.OK;
+        }
     }
 }
