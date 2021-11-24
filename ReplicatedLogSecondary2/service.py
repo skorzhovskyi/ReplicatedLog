@@ -63,7 +63,7 @@ def all_messages_arrived() -> bool:
         min_message_id = min(messages)
         max_message_id = max(messages)
 
-        return num_messages == max_message_id - min_message_id
+        return num_messages == max_message_id - min_message_id + 1
 
 
 @app.route("/health", methods=['GET'])
@@ -78,7 +78,7 @@ def get_messages():
     with messages_lock:
 
         if not all_messages_arrived():
-            return get_response(status=ResponseStatus.not_ready, info='Not all of the messages has arrived!')
+            return get_response(status=ResponseStatus.not_ready, msg='Not all of the messages has arrived!')
 
         # Ordering
         sorted_messages = [message for _, message in sorted(messages.items())]
