@@ -18,7 +18,8 @@ namespace ReplicatedLogMaster
 
     class Server
     {
-        ConcurrentBag<string> m_messages;
+        const int MAX_RETRY_DELAY = 60000;
+        List<string> m_messages;
 
         List<Uri> m_secondaries;
         List<SecondaryHealth> m_secondariesStatus;
@@ -41,7 +42,7 @@ namespace ReplicatedLogMaster
             foreach (var s in m_secondaries)
                 m_secondariesStatus.Add(SecondaryHealth.Undefined);
 
-            m_messages = new ConcurrentBag<string>();
+            m_messages = new List<string>();
 
             m_sender = new MessageSender(broadCastingTimeOut);
 
@@ -76,7 +77,7 @@ namespace ReplicatedLogMaster
                     {
                         Console.WriteLine("GET request processing...");
 
-                        string json = (new Messages(m_messages.ToList())).GetJson();
+                        string json = new Messages(m_messages).GetJson();
 
                         var buffer = Encoding.ASCII.GetBytes(json);
 
@@ -97,18 +98,25 @@ namespace ReplicatedLogMaster
 
                             Console.WriteLine("Message received: " + msg.message);
 
-                            m_messages.Add(msg.message);
-
                             request.InputStream.Close();
 
                             int msgId = m_messages.Count;
 
-                            Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout);
+                            if (Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout))
+                                AddMessage(msg.message);
+                            else
+                            {
+                                Console.WriteLine("Concern parameter is not satisfied");
+                                PostStatus(response, HttpStatusCode.NotModified, "Concern parameter is not satisfied");
+                            }
 
                             Console.WriteLine("POST request processed");
                         }
                         else
+                        {
                             Console.WriteLine("No quorum");
+                            PostStatus(response, HttpStatusCode.NotModified, "No quorum");
+                        }
                     }
 
                     Console.WriteLine();
@@ -127,7 +135,27 @@ namespace ReplicatedLogMaster
             }
         }
 
-        bool IsQuorum()
+        private void AddMessage(string msg)
+        {
+            var someObj = new object();
+            lock (someObj)
+                m_messages.Add(msg);
+        }
+
+        private void PostStatus(HttpListenerResponse responese, HttpStatusCode statusCode, string msg)
+        {
+            responese.StatusCode = (int)statusCode;
+
+            byte[] buffer = Encoding.UTF8.GetBytes("{\"msg\":\"" + msg +"\"}");
+
+            responese.ContentType = "Application/json";
+            responese.ContentLength64 = buffer.Length;
+
+            System.IO.Stream output = responese.OutputStream;
+            output.Write(buffer, 0, buffer.Length);
+        }
+
+        private bool IsQuorum()
         {
             return m_secondariesStatus.Count(x => x == SecondaryHealth.Healthy) >= m_quorum;
         }
@@ -168,7 +196,7 @@ namespace ReplicatedLogMaster
             }
         }
 
-        private void SendMessage(string message, int id, Uri uri, CountdownEvent cde, System.Timers.Timer timer, bool retry = false)
+        private void SendMessage(string message, int id, Uri uri, CountdownEvent cde, CancellationToken ct, System.Timers.Timer timer, int retryDelay, bool retry = false)
         {
             var task = m_sender.SendMessageAsync(message, uri);
 
@@ -194,20 +222,20 @@ namespace ReplicatedLogMaster
 
                 if (retry)
                 {
-                    if (timer.Enabled)                  
-                        Thread.Sleep(m_retryDelay);
-                    
+                    if (timer.Enabled)
+                        Task.Delay(retryDelay, ct).Wait(ct);
+
                     if (timer.Enabled)
                     {
                         Console.WriteLine("Retry slave " + uri.ToString());
-                        SendMessage(message, id, uri, cde, timer, retry);
+                        SendMessage(message, id, uri, cde, ct, timer, Math.Min(retryDelay * 2, MAX_RETRY_DELAY), retry);
                     }
                 }
 
             });
         }
 
-        private void Broadcast(string message, int id, int w, int retryTimeout)
+        private bool Broadcast(string message, int id, int w, int retryTimeout)
         {
             CancellationTokenSource cts = new CancellationTokenSource();
 
@@ -228,7 +256,7 @@ namespace ReplicatedLogMaster
             var cde = new CountdownEvent(w - 1);
 
             foreach (var s in m_secondaries)
-                SendMessage(message, id, s, cde, timer, true);
+                SendMessage(message, id, s, cde, cts.Token, timer, m_retryDelay, true);
 
             try
             {
@@ -252,6 +280,8 @@ namespace ReplicatedLogMaster
             }
 
             Console.WriteLine("Broadcasting finished");
+
+            return cde.IsSet;
         }
     }
 }
