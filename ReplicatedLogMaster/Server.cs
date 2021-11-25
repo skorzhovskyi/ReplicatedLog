@@ -19,6 +19,7 @@ namespace ReplicatedLogMaster
     class Server
     {
         const int MAX_RETRY_DELAY = 60000;
+        const int BACKOFF_INCREASE = 5000;
         List<string> m_messages;
 
         List<Uri> m_secondaries;
@@ -102,9 +103,9 @@ namespace ReplicatedLogMaster
 
                             int msgId = m_messages.Count + 1;
 
-                            if (Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout))
-                                AddMessage(msg.message);
-                            else
+                            AddMessage(msg.message);
+
+                            if (!Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout))
                             {
                                 Console.WriteLine("Concern parameter is not satisfied");
                                 PostStatus(response, HttpStatusCode.NotModified, "Concern parameter is not satisfied");
@@ -228,7 +229,7 @@ namespace ReplicatedLogMaster
                     if (timer.Enabled)
                     {
                         Console.WriteLine("Retry slave " + uri.ToString());
-                        SendMessage(message, id, uri, cde, ct, timer, Math.Min(retryDelay * 2, MAX_RETRY_DELAY), retry);
+                        SendMessage(message, id, uri, cde, ct, timer, Math.Min(retryDelay + BACKOFF_INCREASE, MAX_RETRY_DELAY), retry);
                     }
                 }
 
