@@ -16,26 +16,27 @@ $ docker-compose -f docker-compose.yml up -d rep-log-secondary-2
 $ docker logs replicatedlogsecondary2_rep-log-secondary-2_1
 ```
 
-## 💡 Endpoints
-
-### 1. Append message
+## ✨ Endpoints
 
 ```
-$ SECONDARY=http://localhost:2202/
-$ curl -XPOST --header "Content-Type: application/json" -d'{"message": "hello"}' ${SECONDARY}
+$ SECONDARY=http://localhost:2202
+$ HEADERS="Content-Type: application/json"
+
+$ curl -XGET ${SECONDARY}/health
 {"status": "ok"}
-$ curl -XPOST --header "Content-Type: application/json" -d'{"message": "world"}' ${SECONDARY}
+
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 1, "message": "first"}'
 {"status": "ok"}
-```
 
-### 2. Get all messages
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 3, "message": "third"}'
+{"status": "ok"}
 
-```
-$ curl -XGET http://localhost:2202/
-{
-  "messages": [
-    "hello",
-    "world"
-  ]
-}
+$ curl -XGET ${SECONDARY}/
+{"status": "ok", messages": ["first"]}
+
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 2, "message": "second"}'
+{"status": "ok"}
+
+$ curl -XGET ${SECONDARY}/
+{"status": "ok", messages": ["first", "second", "third"]}
 ```
