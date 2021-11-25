@@ -80,13 +80,21 @@ app.get('/', async (req, res) => {
 		}
 	});
 
-  if(ordered.length != 0 && ordered2.length != 0){
-    if(ordered[ordered.length - 1].id == ordered2[0].id - 1) {
-  			ordered.push(ordered2[0]);
-  			ordered2.shift();
-  	}
-  }
-
+  ordered2.forEach((e) => {
+    if(ordered.length != 0 && ordered2.length != 0) {
+      if(ordered[ordered.length - 1].id == ordered2[0].id - 1) {
+        ordered.push(ordered2[0]);
+        ordered2.shift();
+      }
+    }
+    if(ordered.length != 0 && ordered2.length == 1) {
+      if(ordered[ordered.length - 1].id == ordered2[0].id - 1) {
+        ordered.push(ordered2[0]);
+        ordered2.shift();
+      }
+    }
+  });
+  
 	console.log("Secondary_1 All messages: " + JSON.stringify(ordered));
 	console.log("Secondary_1 Messages in queue: " + JSON.stringify(ordered2));
   res.send({messages: ordered});
