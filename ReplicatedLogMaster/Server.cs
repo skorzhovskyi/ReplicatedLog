@@ -100,7 +100,7 @@ namespace ReplicatedLogMaster
 
                             request.InputStream.Close();
 
-                            int msgId = m_messages.Count;
+                            int msgId = m_messages.Count + 1;
 
                             if (Broadcast(new MessageOut(msg.message, msgId).GetJson(), msgId, msg.w, retryTimeout))
                                 AddMessage(msg.message);
