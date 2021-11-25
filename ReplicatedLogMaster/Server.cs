@@ -9,12 +9,19 @@ using System.Collections.Concurrent;
 
 namespace ReplicatedLogMaster
 {
+    enum SecondaryHealth
+    {
+        Undefined,
+        Unhealthy,
+        Healthy
+    }
+
     class Server
     {
         ConcurrentBag<string> m_messages;
 
         List<Uri> m_secondaries;
-        List<bool> m_secondariesStatus;
+        List<SecondaryHealth> m_secondariesStatus;
 
         HttpListener m_listener;
 
@@ -32,7 +39,7 @@ namespace ReplicatedLogMaster
             m_secondariesStatus = new();
 
             foreach (var s in m_secondaries)
-                m_secondariesStatus.Add(true);
+                m_secondariesStatus.Add(SecondaryHealth.Undefined);
 
             m_messages = new ConcurrentBag<string>();
 
@@ -122,7 +129,7 @@ namespace ReplicatedLogMaster
 
         bool IsQuorum()
         {
-            return m_secondariesStatus.Count(x => x) >= m_quorum;
+            return m_secondariesStatus.Count(x => x == SecondaryHealth.Healthy) >= m_quorum;
         }
 
         private void Ping(Uri uri, int secondaryId)
@@ -135,9 +142,9 @@ namespace ReplicatedLogMaster
                 {
                     if (result.Result)
                     {
-                        if (!m_secondariesStatus[secondaryId])
+                        if (m_secondariesStatus[secondaryId] != SecondaryHealth.Healthy)
                             Console.WriteLine("Slave " + uri.ToString() + " - available");
-                        m_secondariesStatus[secondaryId] = true;
+                        m_secondariesStatus[secondaryId] = SecondaryHealth.Healthy;
                         return;
                     }
                 }
@@ -145,10 +152,10 @@ namespace ReplicatedLogMaster
                 {
                 }
 
-                if (m_secondariesStatus[secondaryId])
+                if (m_secondariesStatus[secondaryId] != SecondaryHealth.Unhealthy)
                     Console.WriteLine("Slave " + uri.ToString() + " - unavailable");
 
-                m_secondariesStatus[secondaryId] = false;
+                m_secondariesStatus[secondaryId] = SecondaryHealth.Unhealthy;
             });
         }
 
@@ -183,19 +190,18 @@ namespace ReplicatedLogMaster
                 {
                 }
 
-                if (!retry || timer.Enabled)
-                    Console.WriteLine("Slave " + uri.ToString() + " - failed");
+                Console.WriteLine("Slave " + uri.ToString() + " - failed");
 
                 if (retry)
                 {
+                    if (timer.Enabled)                  
+                        Thread.Sleep(m_retryDelay);
+                    
                     if (timer.Enabled)
                     {
-                        Console.WriteLine("Retry in " + m_retryDelay + " sec...");
-                        Thread.Sleep(m_retryDelay);
-                    }
-
-                    if (timer.Enabled)
+                        Console.WriteLine("Retry slave " + uri.ToString());
                         SendMessage(message, id, uri, cde, timer, retry);
+                    }
                 }
 
             });

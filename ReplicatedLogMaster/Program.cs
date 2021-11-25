@@ -25,7 +25,7 @@ namespace ReplicatedLogMaster
             int retryTimeout = _retryTimeout == null ? 30000 : int.Parse(_retryTimeout) * 1000;
             int pingDelay = _pingDelay == null ? 5000 : int.Parse(_pingDelay) * 1000;
             int retryDelay = _retryDelay == null ? 5000 : int.Parse(_pingDelay) * 1000;
-            int quorum = _quorum == null ? 0 : int.Parse(_quorum);
+            int quorum = _quorum == null ? 1 : int.Parse(_quorum);
 
             Console.WriteLine("Host: " + host);
             Console.WriteLine("Port: " + port);
