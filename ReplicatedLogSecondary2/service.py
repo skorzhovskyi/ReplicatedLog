@@ -33,7 +33,7 @@ post_delay: _t.Optional[int] = None
 
 
 def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
-    """Log error response with stacktrace before return"""
+    """Return json response with all additional information inside"""
     response = dict(status=status.value, **kwargs)
     if msg is not None:
         if status == ResponseStatus.error:
@@ -47,6 +47,7 @@ def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs)
 
 
 def get_error_response(msg: str) -> flask.Response:
+    """Log stacktrace with error before the response"""
     return get_response(status=ResponseStatus.error, msg=msg)
 
 
@@ -74,12 +75,14 @@ def trim_messages() -> _t.Generator[str, None, None]:
 
 
 @app.route("/health", methods=['GET'])
-def check_health():
+def check_health() -> flask.Response:
+    """Check service health"""
     return get_response(status=ResponseStatus.ok)
 
 
 @app.route("/", methods=['GET'])
-def get_messages():
+def get_messages() -> flask.Response:
+    """Get all messages from the local queue"""
     logger.info('Get all messages ...')
     sorted_messages = list(trim_messages())
     logger.info(f'Found {len(sorted_messages)} messages.')
@@ -88,7 +91,8 @@ def get_messages():
 
 
 @app.route("/", methods=['POST'])
-def append_message():
+def append_message() -> flask.Response:
+    """Append new message to the local queue"""
 
     try:
         request_body = flask.request.get_json()
