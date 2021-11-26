@@ -32,7 +32,12 @@ messages_lock = RLock()
 post_delay: _t.Optional[int] = None
 
 
-def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
+def get_response(
+    status: ResponseStatus,
+    status_code: int = 200,
+    msg: _t.Optional[str] = None,
+    **kwargs,
+) -> flask.Response:
     """Return json response with all additional information inside"""
     response = dict(status=status.value, **kwargs)
 
@@ -42,13 +47,13 @@ def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs)
     # TODO: Print endpoint and method
     logger.debug(f'Response: {response}')
 
-    return flask.jsonify(response)
+    return flask.jsonify(response), status_code
 
 
-def get_error_response(msg: str) -> flask.Response:
+def get_error_response(msg: str, status_code: int = 500, **kwargs) -> flask.Response:
     """Log stacktrace with error before the response"""
     logger.exception(msg)
-    return get_response(status=ResponseStatus.error, msg=msg)
+    return get_response(status=ResponseStatus.error, status_code=status_code, msg=msg, **kwargs)
 
 
 def trim_messages() -> _t.Generator[str, None, None]:
