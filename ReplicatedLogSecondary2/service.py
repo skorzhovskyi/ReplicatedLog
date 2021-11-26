@@ -35,9 +35,8 @@ post_delay: _t.Optional[int] = None
 def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
     """Return json response with all additional information inside"""
     response = dict(status=status.value, **kwargs)
+
     if msg is not None:
-        if status == ResponseStatus.error:
-            logger.exception(msg)
         response['message'] = msg
 
     # TODO: Print endpoint and method
@@ -48,6 +47,7 @@ def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs)
 
 def get_error_response(msg: str) -> flask.Response:
     """Log stacktrace with error before the response"""
+    logger.exception(msg)
     return get_response(status=ResponseStatus.error, msg=msg)
 
 
@@ -128,7 +128,7 @@ def append_message() -> flask.Response:
         messages[message_id] = message
         logger.info(f'There are {len(messages)} messages in queue.')
 
-    return flask.jsonify({'status': 'ok'})
+    return get_response(status=ResponseStatus.ok, message_id=message_id)
 
 
 def run_app() -> None:
