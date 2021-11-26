@@ -129,6 +129,7 @@ def append_message() -> flask.Response:
         time.sleep(post_delay)
 
     if return_error_before_even_message and message_id % 2 == 0:
+        # Error is returned for message with even message_id and message is not put into queue
         return get_error_response(msg='Testing error before even message!', message_id=message_id)
 
     with messages_lock:
@@ -142,6 +143,7 @@ def append_message() -> flask.Response:
         messages[message_id] = message
         logger.info(f'[id={message_id}] There are {len(messages)} messages in queue.')
 
+    # Error is returned for message with even message_id after message was put into queue
     status_code = 500 if return_error_after_even_message and message_id % 2 == 0 else 200
 
     return get_response(status=ResponseStatus.ok, status_code=status_code, message_id=message_id)
