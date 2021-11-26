@@ -28,7 +28,7 @@ services:
     environment:
       SECONDARY1_HOST: '*'
       SECONDARY1_PORT: 3000
-      POST_DELAY: 10
+      POST_DELAY: 0
     ports:
       - "2201:3000"
     networks:
@@ -41,7 +41,9 @@ services:
     environment:
       SECONDARY_HOST: '0.0.0.0'
       SECONDARY_PORT: 5000
-      POST_DELAY: 10
+      POST_DELAY: 0
+      ERROR_BEFORE_EVEN_MESSAGE: 'false'
+      ERROR_AFTER_EVEN_MESSAGE: 'false'
     ports:
       - "2202:5000"
     networks:
