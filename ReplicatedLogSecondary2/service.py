@@ -31,23 +31,35 @@ messages_lock = RLock()
 # Delay in sec for POST requests, default is no delay
 post_delay: _t.Optional[int] = None
 
+# This flag can be used to test messages consistency
+return_error_before_even_message = False
 
-def get_response(status: ResponseStatus, msg: _t.Optional[str] = None, **kwargs) -> flask.Response:
-    """Log error response with stacktrace before return"""
+# This flag can be used to test message deduplication
+return_error_after_even_message = False
+
+
+def get_response(
+    status: ResponseStatus,
+    status_code: int = 200,
+    msg: _t.Optional[str] = None,
+    **kwargs,
+) -> flask.Response:
+    """Return json response with all additional information inside"""
     response = dict(status=status.value, **kwargs)
+
     if msg is not None:
-        if status == ResponseStatus.error:
-            logger.exception(msg)
         response['message'] = msg
 
     # TODO: Print endpoint and method
-    logger.debug(f'Response: {response}')
+    logger.debug(f'Response: {response} Status code: {status_code}')
 
-    return flask.jsonify(response)
+    return flask.jsonify(response), status_code
 
 
-def get_error_response(msg: str) -> flask.Response:
-    return get_response(status=ResponseStatus.error, msg=msg)
+def get_error_response(msg: str, status_code: int = 500, **kwargs) -> flask.Response:
+    """Log stacktrace with error before the response"""
+    logger.exception(msg)
+    return get_response(status=ResponseStatus.error, status_code=status_code, msg=msg, **kwargs)
 
 
 def trim_messages() -> _t.Generator[str, None, None]:
@@ -74,12 +86,14 @@ def trim_messages() -> _t.Generator[str, None, None]:
 
 
 @app.route("/health", methods=['GET'])
-def check_health():
+def check_health() -> flask.Response:
+    """Check service health"""
     return get_response(status=ResponseStatus.ok)
 
 
 @app.route("/", methods=['GET'])
-def get_messages():
+def get_messages() -> flask.Response:
+    """Get all messages from the local queue"""
     logger.info('Get all messages ...')
     sorted_messages = list(trim_messages())
     logger.info(f'Found {len(sorted_messages)} messages.')
@@ -88,7 +102,8 @@ def get_messages():
 
 
 @app.route("/", methods=['POST'])
-def append_message():
+def append_message() -> flask.Response:
+    """Append new message to the local queue"""
 
     try:
         request_body = flask.request.get_json()
@@ -113,6 +128,10 @@ def append_message():
         logger.info(f'[id={message_id}] Sleep for {post_delay} seconds ...')
         time.sleep(post_delay)
 
+    if return_error_before_even_message and message_id % 2 == 0:
+        # Error is returned for message with even message_id and message is not put into queue
+        return get_error_response(msg='Testing error before even message!', message_id=message_id)
+
     with messages_lock:
 
         # Deduplication
@@ -122,17 +141,22 @@ def append_message():
 
         logger.info(f'[id={message_id}] Add new message ...')
         messages[message_id] = message
-        logger.info(f'There are {len(messages)} messages in queue.')
+        logger.info(f'[id={message_id}] There are {len(messages)} messages in queue.')
 
-    return flask.jsonify({'status': 'ok'})
+    # Error is returned for message with even message_id after message was put into queue
+    status_code = 500 if return_error_after_even_message and message_id % 2 == 0 else 200
+
+    return get_response(status=ResponseStatus.ok, status_code=status_code, message_id=message_id)
 
 
 def run_app() -> None:
-    global post_delay, logger
+    global post_delay, return_error_before_even_message, return_error_after_even_message, logger
 
     host = os.environ['SECONDARY_HOST']
     port = int(os.environ['SECONDARY_PORT'])
     post_delay = int(os.getenv('POST_DELAY', 0))
+    return_error_before_even_message = bool(os.getenv('ERROR_BEFORE_EVEN_MESSAGE', 'false') == 'true')
+    return_error_after_even_message = bool(os.getenv('ERROR_AFTER_EVEN_MESSAGE', 'false') == 'true')
 
     app.run(host=host, port=port, debug=False)
 
