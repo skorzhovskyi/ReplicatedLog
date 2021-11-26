@@ -31,6 +31,9 @@ messages_lock = RLock()
 # Delay in sec for POST requests, default is no delay
 post_delay: _t.Optional[int] = None
 
+# This flag is for testing consistency
+return_error_before_even_message = False
+
 
 def get_response(
     status: ResponseStatus,
@@ -122,6 +125,9 @@ def append_message() -> flask.Response:
         logger.info(f'[id={message_id}] Sleep for {post_delay} seconds ...')
         time.sleep(post_delay)
 
+    if return_error_before_even_message and message_id % 2 == 0:
+        return get_error_response(msg='Testing error before even message!', message_id=message_id)
+
     with messages_lock:
 
         # Deduplication
@@ -131,17 +137,18 @@ def append_message() -> flask.Response:
 
         logger.info(f'[id={message_id}] Add new message ...')
         messages[message_id] = message
-        logger.info(f'There are {len(messages)} messages in queue.')
+        logger.info(f'[id={message_id}] There are {len(messages)} messages in queue.')
 
     return get_response(status=ResponseStatus.ok, message_id=message_id)
 
 
 def run_app() -> None:
-    global post_delay, logger
+    global post_delay, return_error_before_even_message, logger
 
     host = os.environ['SECONDARY_HOST']
     port = int(os.environ['SECONDARY_PORT'])
     post_delay = int(os.getenv('POST_DELAY', 0))
+    return_error_before_even_message = bool(os.getenv('ERROR_BEFORE_EVEN_MESSAGE', 'false') == 'true')
 
     app.run(host=host, port=port, debug=False)
 
