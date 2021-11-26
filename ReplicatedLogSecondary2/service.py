@@ -51,7 +51,7 @@ def get_response(
         response['message'] = msg
 
     # TODO: Print endpoint and method
-    logger.debug(f'Response: {response}')
+    logger.debug(f'Response: {response} Status code: {status_code}')
 
     return flask.jsonify(response), status_code
 
