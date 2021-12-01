@@ -17,6 +17,7 @@ namespace ReplicatedLogMaster
             string? _pingDelay = Environment.GetEnvironmentVariable("PING_DELAY");
             string? _retryDelay = Environment.GetEnvironmentVariable("RETRY_DELAY");
             string? _quorum = Environment.GetEnvironmentVariable("QUORUM");
+            string? _batchSize = Environment.GetEnvironmentVariable("BATCH_SIZE");
 
             string host = _host == null ? "localhost" : _host;
             int port = _port == null ? 2100 : int.Parse(_port);
@@ -25,7 +26,8 @@ namespace ReplicatedLogMaster
             int retryTimeout = _retryTimeout == null ? 30000 : int.Parse(_retryTimeout) * 1000;
             int pingDelay = _pingDelay == null ? 5000 : int.Parse(_pingDelay) * 1000;
             int retryDelay = _retryDelay == null ? 5000 : int.Parse(_pingDelay) * 1000;
-            int quorum = _quorum == null ? 1 : int.Parse(_quorum);
+            int quorum = _quorum == null ? 0 : int.Parse(_quorum);
+            int batchSize = _batchSize == null ? 2 : int.Parse(_batchSize);
 
             Console.WriteLine("Host: " + host);
             Console.WriteLine("Port: " + port);
@@ -54,7 +56,7 @@ namespace ReplicatedLogMaster
                 }
             }
 
-            new Server(host, port, retryTimeout, secondaries, broadCastingTimeOut, retryDelay, pingDelay, quorum);
+            new Server(host, port, retryTimeout, secondaries, broadCastingTimeOut, retryDelay, pingDelay, quorum, batchSize);
         }
     }
 }

@@ -17,6 +17,7 @@ services:
       PING_DELAY: 5
       RETRY_DELAY: 5
       QUORUM: 1
+      BATCH_SIZE: 2
     ports:
       - "2100:2100"
     networks:
