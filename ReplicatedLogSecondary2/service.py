@@ -64,25 +64,24 @@ def get_error_response(msg: str, status_code: int = 500, **kwargs) -> flask.Resp
 
 def trim_messages() -> _t.Generator[str, None, None]:
     """Return messages till the end or the first missing"""
-    with messages_lock:
 
-        # Ordering
-        # NOTE: Here unimportant, but this is not memory efficient (to create the copy of all messages)
-        #       Using list for ready messages and dict for unready will be more efficient
-        sorted_messages = sorted(messages.items())
-        # NOTE: Python dict ensures, that messages are sorted as how they were inserted,
-        #       and this may not be their natural order
+    # Ordering
+    # NOTE: Here unimportant, but this is not memory efficient (to create the copy of all messages)
+    #       Using list for ready messages and dict for unready will be more efficient
+    sorted_messages = sorted(messages.items())
+    # NOTE: Python dict ensures, that messages are sorted as how they were inserted,
+    #       and this may not be their natural order
 
-        prev_message_id = None
-        for message_id, message in sorted_messages:
+    prev_message_id = None
+    for message_id, message in sorted_messages:
 
-            if prev_message_id is not None and message_id != prev_message_id + 1:
-                logger.info(f'Stop at message with [id={message_id}]')
-                break
+        if prev_message_id is not None and message_id != prev_message_id + 1:
+            logger.info(f'Stop at message with [id={message_id}]')
+            break
 
-            yield message
+        yield message
 
-            prev_message_id = message_id
+        prev_message_id = message_id
 
 
 @app.route("/health", methods=['GET'])
