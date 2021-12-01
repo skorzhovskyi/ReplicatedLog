@@ -22,9 +22,11 @@ service_name = 'replicated-log-secondary-2'
 app = flask.Flask(service_name)
 logger: _t.Optional[logging.Logger] = None
 
-# Mapping from message id into message text, the insert order of messages is preserved
-messages: _t.Dict[int, str] = {}
-# Using lock on messages makes sure they are safe across multiple threads
+# Ready to display queue of messages
+messages_queue: _t.List[str] = []
+# Buffer contains messages that cannot yet be added into message queue because of delays
+messages_buffer: _t.Dict[int, str] = {}
+# Using lock on messages queue and buffer makes sure they are safe across multiple threads
 # NOTE: Can be acquired multiple times by the same thread
 messages_lock = RLock()
 
@@ -62,28 +64,6 @@ def get_error_response(msg: str, status_code: int = 500, **kwargs) -> flask.Resp
     return get_response(status=ResponseStatus.error, status_code=status_code, msg=msg, **kwargs)
 
 
-def trim_messages() -> _t.Generator[str, None, None]:
-    """Return messages till the end or the first missing"""
-
-    # Ordering
-    # NOTE: Here unimportant, but this is not memory efficient (to create the copy of all messages)
-    #       Using list for ready messages and dict for unready will be more efficient
-    sorted_messages = sorted(messages.items())
-    # NOTE: Python dict ensures, that messages are sorted as how they were inserted,
-    #       and this may not be their natural order
-
-    prev_message_id = None
-    for message_id, message in sorted_messages:
-
-        if prev_message_id is not None and message_id != prev_message_id + 1:
-            logger.info(f'Stop at message with [id={message_id}]')
-            break
-
-        yield message
-
-        prev_message_id = message_id
-
-
 @app.route("/health", methods=['GET'])
 def check_health() -> flask.Response:
     """Check service health"""
@@ -92,12 +72,31 @@ def check_health() -> flask.Response:
 
 @app.route("/", methods=['GET'])
 def get_messages() -> flask.Response:
-    """Get all messages from the local queue"""
+    """Get all messages from the queue"""
     logger.info('Get all messages ...')
-    sorted_messages = list(trim_messages())
-    logger.info(f'Found {len(sorted_messages)} messages.')
+    return get_response(status=ResponseStatus.ok, messages=messages_queue)
 
-    return get_response(status=ResponseStatus.ok, messages=sorted_messages)
+
+def is_next_message(message_id: int) -> bool:
+    """Check if this is the next message, based on the assumption that messages start with id = 1"""
+    return message_id == len(messages_queue) + 1
+
+
+def try_add_from_buffer() -> None:
+    """Try add messages from buffer into the queue"""
+    if not messages_buffer:
+        # Buffer is empty
+        return
+
+    # Iterate from the earliest to the latest message in buffer
+    for message_id, message in sorted(messages_buffer.items()):
+        if not is_next_message(message_id):
+            # Next message is not yet in the buffer, all further messages can be skipped
+            break
+
+        logger.info(f'[id={message_id}] Move message from buffer into queue ...')
+        messages_queue.append(message)
+        del messages_buffer[message_id]
 
 
 @app.route("/", methods=['POST'])
@@ -134,13 +133,22 @@ def append_message() -> flask.Response:
     with messages_lock:
 
         # Deduplication
-        if message_id in messages:
+        is_duplicated = message_id <= len(messages_queue)
+        if is_duplicated:
             logger.warning(f'[id={message_id}] Message with such id already exists!')
             return get_response(status=ResponseStatus.already_exists, message_id=message_id)
 
-        logger.info(f'[id={message_id}] Add new message ...')
-        messages[message_id] = message
-        logger.info(f'[id={message_id}] There are {len(messages)} messages in queue.')
+        if is_next_message(message_id):
+            logger.info(f'[id={message_id}] Add new message into queue ...')
+            messages_queue.append(message)
+            try_add_from_buffer()
+        else:
+            # Add into buffer since there are delayed messages
+            logger.info(f'[id={message_id}] Add new message into buffer ...')
+            messages_buffer[message_id] = message
+
+        logger.info(f'[id={message_id}] There are {len(messages_queue)} messages in queue.')
+        logger.info(f'[id={message_id}] There are {len(messages_buffer)} messages in buffer.')
 
     # Error is returned for message with even message_id after message was put into queue
     status_code = 500 if return_error_after_even_message and message_id % 2 == 0 else 200
