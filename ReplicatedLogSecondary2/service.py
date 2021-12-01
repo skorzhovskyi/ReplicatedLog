@@ -10,11 +10,6 @@ import flask
 from utils import get_console_logger
 
 
-class ResponseStatus(Enum):
-    error = 'error'
-    ok = 'ok'
-
-
 SERVICE_NAME = 'replicated-log-secondary-2'
 
 # Delay in sec for POST requests, default is no delay
@@ -39,10 +34,16 @@ messages_buffer: _t.Dict[int, str] = {}
 messages_lock = RLock()
 
 
+class ResponseStatus(Enum):
+    error = 'error'
+    ok = 'ok'
+
+
 def get_response(
     status: ResponseStatus,
     status_code: int = 200,
     msg: _t.Optional[str] = None,
+    verbose: bool = True,
     **kwargs,
 ) -> flask.Response:
     """Return json response with all additional information inside"""
@@ -52,7 +53,8 @@ def get_response(
         response['message'] = msg
 
     # TODO: Print endpoint and method
-    LOGGER.debug(f'Response: {response} Status code: {status_code}')
+    if verbose:
+        LOGGER.debug(f'Response: {response} Status code: {status_code}')
 
     return flask.jsonify(response), status_code
 
@@ -66,7 +68,7 @@ def get_error_response(msg: str, status_code: int = 500, **kwargs) -> flask.Resp
 @app.route("/health", methods=['GET'])
 def check_health() -> flask.Response:
     """Check service health"""
-    return get_response(status=ResponseStatus.ok)
+    return get_response(status=ResponseStatus.ok, verbose=False)
 
 
 @app.route("/", methods=['GET'])
