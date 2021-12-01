@@ -23,7 +23,7 @@ namespace ReplicatedLogMaster
         List<Uri> m_secondaries;
         List<SecondaryHealth> m_secondariesStatus;
 
-        Dictionary<Uri, List<MessageOut>> m_retryQueue;
+        Dictionary<Uri, List<MessagesOut>> m_retryQueue;
 
         HttpListener m_listener;
 
@@ -34,7 +34,7 @@ namespace ReplicatedLogMaster
 
         public Server(string host, int port, int retryTimeout, List<Uri> secondaries, int broadCastingTimeOut, int retryDelay, int pingDelay, int quorum, int batchSize)
         {
-            m_retryQueue = new Dictionary<Uri, List<MessageOut>>();
+            m_retryQueue = new Dictionary<Uri, List<MessagesOut>>();
 
             m_batchSize = batchSize;
             m_quorum = quorum;
@@ -45,7 +45,7 @@ namespace ReplicatedLogMaster
             foreach (var s in m_secondaries)
             {
                 m_secondariesStatus.Add(SecondaryHealth.Undefined);
-                m_retryQueue[s] = new List<MessageOut>();
+                m_retryQueue[s] = new List<MessagesOut>();
             }
 
             m_messages = new List<string>();
@@ -110,7 +110,7 @@ namespace ReplicatedLogMaster
 
                             AddMessage(msg.message);
 
-                            if (!Broadcast(new MessageOut(msg.message, msgId), msg.w))
+                            if (!Broadcast(new MessagesOut(msg.message, msgId), msg.w))
                             {
                                 Console.WriteLine("Concern parameter is not satisfied");
                                 PostStatus(response, HttpStatusCode.NotModified, "Concern parameter is not satisfied");
@@ -170,12 +170,12 @@ namespace ReplicatedLogMaster
         {
             while(m_retryQueue[uri].Count != 0)
             {
-                var batch = new List<MessageOut>();
+                var batch = new MessagesOut();
 
                 var batchSize = Math.Min(m_batchSize, m_retryQueue[uri].Count);
 
                 for (int i = 0; i < batchSize; i++)
-                    batch.Add(m_retryQueue[uri][i]);
+                    batch.Append(m_retryQueue[uri][i]);
 
                 if (SendMessages(batch, uri))
                 {
@@ -227,21 +227,13 @@ namespace ReplicatedLogMaster
                 Ping(uri, i);
             }
         }
-
-        private bool SendMessage(MessageOut msg, Uri uri)
-        {
-            return m_sender.SendMessage(msg.GetJson(), uri);
-        }
         
-        private bool SendMessages(List<MessageOut> msgs, Uri uri)
+        private bool SendMessages(MessagesOut msgs, Uri uri)
         {
-            if (msgs.Count == 1)
-                return SendMessage(msgs[0], uri);
-
-            return m_sender.SendMessage(new MessagesOut(msgs).GetJson(), uri);
+            return m_sender.SendMessage(msgs.GetJson(), uri);
         }
 
-        private void SendMessageAsync(MessageOut msg, Uri uri, CountdownEvent cdeConcern, CountdownEvent cdeTotal, CancellationTokenSource token)
+        private void SendMessageAsync(MessagesOut msg, Uri uri, CountdownEvent cdeConcern, CountdownEvent cdeTotal, CancellationTokenSource token)
         {
             var task = m_sender.SendMessageAsync(msg.GetJson(), uri);
 
@@ -283,7 +275,7 @@ namespace ReplicatedLogMaster
             });
         }
 
-        private bool Broadcast(MessageOut msg, int w)
+        private bool Broadcast(MessagesOut msg, int w)
         {        
             Console.WriteLine("Broadcasting message started");
 
