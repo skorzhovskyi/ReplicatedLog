@@ -14,7 +14,6 @@ from utils import get_console_logger
 class ResponseStatus(Enum):
     error = 'error'
     ok = 'ok'
-    already_exists = 'already_exists'
 
 
 service_name = 'replicated-log-secondary-2'
@@ -99,44 +98,15 @@ def try_add_from_buffer() -> None:
         del messages_buffer[message_id]
 
 
-@app.route("/", methods=['POST'])
-def append_message() -> flask.Response:
-    """Append new message to the local queue"""
-
-    try:
-        request_body = flask.request.get_json()
-    except TypeError:
-        return get_error_response(msg='Could not parse input json!')
-
-    try:
-        message = request_body['message']
-    except KeyError:
-        return get_error_response('Not found "message" in input json!')
-    except TypeError:
-        return get_error_response('Could not get data from request! Possible reasons: missing Content-Type in headers')
-
-    try:
-        message_id = int(request_body['id'])
-    except KeyError:
-        return get_error_response('Not found field "id" inside input json!')
-    except ValueError:
-        return get_error_response('Could not parse field "id" from input json!')
-
-    if post_delay > 0:
-        logger.info(f'[id={message_id}] Sleep for {post_delay} seconds ...')
-        time.sleep(post_delay)
-
-    if return_error_before_even_message and message_id % 2 == 0:
-        # Error is returned for message with even message_id and message is not put into queue
-        return get_error_response(msg='Testing error before even message!', message_id=message_id)
-
+def handle_message(message_id: int, message: str) -> None:
+    """Add message into the queue or buffer"""
     with messages_lock:
 
         # Deduplication
         is_duplicated = message_id <= len(messages_queue)
         if is_duplicated:
             logger.warning(f'[id={message_id}] Message with such id already exists!')
-            return get_response(status=ResponseStatus.already_exists, message_id=message_id)
+            return
 
         if is_next_message(message_id):
             logger.info(f'[id={message_id}] Add new message into queue ...')
@@ -150,10 +120,49 @@ def append_message() -> flask.Response:
         logger.info(f'[id={message_id}] There are {len(messages_queue)} messages in queue.')
         logger.info(f'[id={message_id}] There are {len(messages_buffer)} messages in buffer.')
 
-    # Error is returned for message with even message_id after message was put into queue
-    status_code = 500 if return_error_after_even_message and message_id % 2 == 0 else 200
 
-    return get_response(status=ResponseStatus.ok, status_code=status_code, message_id=message_id)
+@app.route("/", methods=['POST'])
+def append_message() -> flask.Response:
+    """Append new message to the local queue"""
+
+    try:
+        request_body = flask.request.get_json()
+    except TypeError:
+        return get_error_response(msg='Could not parse input json!')
+
+    try:
+        messages = request_body['messages']
+    except KeyError:
+        return get_error_response('Not found "messages" in input json!')
+    except TypeError:
+        return get_error_response('Could not get data from request! Possible reasons: missing Content-Type in headers')
+
+    try:
+        message_ids = [int(message_id) for message_id in request_body['ids']]
+    except KeyError:
+        return get_error_response('Not found field "id" inside input json!')
+    except ValueError:
+        return get_error_response('Could not parse field "ids" from input json!')
+
+    if len(message_ids) != len(messages):
+        return get_error_response('Number of messages is not the same as number of ids!')
+
+    if post_delay > 0:
+        logger.info(f'Sleep for {post_delay} seconds ...')
+        time.sleep(post_delay)
+
+    if return_error_before_even_message and sum(message_ids) % 2 == 0:
+        # Error is returned if sum(message_id) is even and messages are not added into the queue
+        return get_error_response(msg='Testing error before even message!')
+
+    logger.info(f'Will try to add {len(messages)} messages ...')
+    for message_id, message in sorted(zip(message_ids, messages)):
+        handle_message(message_id, message)
+
+    # Error is returned if sum(message_id) is even after messages were added into the queue
+    status_code = 500 if return_error_after_even_message and sum(message_ids) % 2 == 0 else 200
+
+    return get_response(status=ResponseStatus.ok, status_code=status_code)
 
 
 def run_app() -> None:
