@@ -25,15 +25,13 @@ $ docker-compose up --build
 $ run.sh
 ```
 
-## Examples
+## 🐢 Examples
 
 ### POST request to Master
 
 ```
 $ curl -XPOST http://localhost:2100/ -d'{"message": "hello"}'
 ```
-
-<img width="1359" alt="Знімок екрана 2021-10-16 о 21 41 40" src="https://user-images.githubusercontent.com/71091432/137598746-3e05d236-5dc4-425b-b7ad-8a1f31c066eb.png">
 
 ### GET requests to Master and Secondary
 
@@ -50,9 +48,3 @@ $ curl -XGET http://localhost:2201/
 $ curl -XGET http://localhost:2202/
 {"messages":["hello"]}
 ```
-
-<img width="1359" alt="Знімок екрана 2021-10-16 о 21 42 45" src="https://user-images.githubusercontent.com/71091432/137598785-8bf0c396-21e0-46e8-b9f2-bd67e363354b.png">
-
-### Acknowledgements in Terminal 
-
-<img width="797" alt="Знімок екрана 2021-10-16 о 21 47 29" src="https://user-images.githubusercontent.com/71091432/137598937-45f79e43-9626-4455-af92-351abff9cd81.png">

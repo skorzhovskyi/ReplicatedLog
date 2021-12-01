@@ -1,4 +1,4 @@
-# Replicated Log Secondary 2
+# 📝 Replicated Log Secondary 2
 
 ## 🐳 Commands
 
