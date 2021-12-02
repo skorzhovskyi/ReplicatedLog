@@ -54,7 +54,8 @@ def get_response(
 
     # TODO: Print endpoint and method
     if verbose:
-        LOGGER.debug(f'Response: {response} Status code: {status_code}')
+        endpoint = f'{flask.request.method} {flask.request.path}'
+        LOGGER.debug(f'Response: {response} Endpoint: {endpoint} Status code: {status_code}')
 
     return flask.jsonify(response), status_code
 
