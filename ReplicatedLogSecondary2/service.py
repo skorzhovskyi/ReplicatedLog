@@ -179,6 +179,8 @@ def run_app() -> None:
     RETURN_ERROR_BEFORE_EVEN_MESSAGE = bool(os.getenv('ERROR_BEFORE_EVEN_MESSAGE', 'false') == 'true')
     RETURN_ERROR_AFTER_EVEN_MESSAGE = bool(os.getenv('ERROR_AFTER_EVEN_MESSAGE', 'false') == 'true')
 
+    # Disable built-in Flask logging
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
     LOGGER = get_console_logger(SERVICE_NAME, level=logging.DEBUG)
 
     app.run(host=host, port=port, debug=False)
