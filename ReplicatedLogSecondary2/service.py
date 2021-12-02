@@ -162,9 +162,10 @@ def append_message() -> flask.Response:
         handle_message(message_id, message)
 
     # Error is returned if sum(message_id) is even after messages were added into the queue
+    status = ResponseStatus.error if RETURN_ERROR_AFTER_EVEN_MESSAGE else ResponseStatus.ok
     status_code = 500 if RETURN_ERROR_AFTER_EVEN_MESSAGE and sum(message_ids) % 2 == 0 else 200
 
-    return get_response(status=ResponseStatus.ok, status_code=status_code)
+    return get_response(status=status, status_code=status_code)
 
 
 def run_app() -> None:
