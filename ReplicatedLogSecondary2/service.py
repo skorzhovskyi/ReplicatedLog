@@ -6,6 +6,7 @@ from enum import Enum
 from threading import RLock
 
 import flask
+from werkzeug.exceptions import HTTPException
 
 from utils import get_console_logger
 
@@ -64,6 +65,15 @@ def get_error_response(msg: str, status_code: int = 500, **kwargs) -> flask.Resp
     """Log stacktrace with error before the response"""
     LOGGER.exception(msg)
     return get_response(status=ResponseStatus.error, status_code=status_code, msg=msg, **kwargs)
+
+
+@app.errorhandler(Exception)
+def handle_error(err: Exception) -> flask.Response:
+    """Handle unexpected error"""
+    status_code = 500
+    if isinstance(err, HTTPException):
+        status_code = err.code
+    return get_error_response(msg=str(err), status_code=status_code)
 
 
 @app.route("/health", methods=['GET'])
