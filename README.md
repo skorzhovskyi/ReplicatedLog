@@ -25,15 +25,13 @@ $ docker-compose up --build
 $ run.sh
 ```
 
-## Examples
+## 🐢 Examples
 
 ### POST request to Master
 
 ```
 $ curl -XPOST http://localhost:2100/ -d'{"message": "hello"}'
 ```
-
-<img width="1359" alt="Знімок екрана 2021-10-16 о 21 41 40" src="https://user-images.githubusercontent.com/71091432/137598746-3e05d236-5dc4-425b-b7ad-8a1f31c066eb.png">
 
 ### GET requests to Master and Secondary
 
@@ -51,8 +49,31 @@ $ curl -XGET http://localhost:2202/
 {"messages":["hello"]}
 ```
 
-<img width="1359" alt="Знімок екрана 2021-10-16 о 21 42 45" src="https://user-images.githubusercontent.com/71091432/137598785-8bf0c396-21e0-46e8-b9f2-bd67e363354b.png">
+## 🧪 Testing
 
-### Acknowledgements in Terminal 
+### Simple case
 
-<img width="797" alt="Знімок екрана 2021-10-16 о 21 47 29" src="https://user-images.githubusercontent.com/71091432/137598937-45f79e43-9626-4455-af92-351abff9cd81.png">
+Stop one secondary and send messages with different write concern
+
+```
+$ docker-compose up --build
+$ docker pause replicatedlog_rep-log-secondary-2_1
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m1", "w": 1}' # Ok
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m2", "w": 2}' # Ok
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m3", "w": 3}' # Hangs
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m4", "w": 1}' # Ok
+$ docker unpause replicatedlog_rep-log-secondary-2_1
+```
+
+All messages must arrive after secondary was resurrected.
+
+### Testing ordering
+
+Set `ERROR_BEFORE_EVEN_MESSAGE = true` for secondary and send at least 3 messages. Even messages (messages with even id)
+will never be added into the queue and third message will never be displayed since second did not arrive.
+
+### Testing deduplication
+
+Set `ERROR_AFTER_EVEN_MESSAGE = true` for secondary and send at least 2 messages. Error will be generated after second
+message was added into the queue and master will continue with retries. Retried messages will not be added on secondary
+since message already exists.

@@ -1,4 +1,4 @@
-# Replicated Log Secondary 2
+# 📝 Replicated Log Secondary 2
 
 ## 🐳 Commands
 
@@ -25,16 +25,16 @@ $ HEADERS="Content-Type: application/json"
 $ curl -XGET ${SECONDARY}/health
 {"status": "ok"}
 
-$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 1, "message": "first"}'
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"messages": ["first"], "ids": [1]}'
 {"status": "ok"}
 
-$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 3, "message": "third"}'
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"messages": ["third"], "ids": [3]}'
 {"status": "ok"}
 
 $ curl -XGET ${SECONDARY}/
 {"status": "ok", messages": ["first"]}
 
-$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"id": 2, "message": "second"}'
+$ curl -XPOST --header ${HEADERS} ${SECONDARY}/ -d'{"messages": ["second"], "ids": [2]}'
 {"status": "ok"}
 
 $ curl -XGET ${SECONDARY}/
