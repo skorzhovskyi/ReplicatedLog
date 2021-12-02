@@ -48,3 +48,19 @@ $ curl -XGET http://localhost:2201/
 $ curl -XGET http://localhost:2202/
 {"messages":["hello"]}
 ```
+
+## Testing simple case
+
+Stop one secondary and send messages with different write concern
+
+```
+$ docker-compose up --build
+$ docker pause replicatedlog_rep-log-secondary-2_1
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m1", "w": 1}' # Ok
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m2", "w": 2}' # Ok
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m3", "w": 3}' # Hangs
+$ curl -XPOST http://localhost:2100/ -d'{"message": "m4", "w": 1}' # Ok
+$ docker unpause replicatedlog_rep-log-secondary-2_1
+```
+
+All messages must arrive after secondary was resurrected.
