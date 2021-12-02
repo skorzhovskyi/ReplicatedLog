@@ -233,7 +233,7 @@ namespace ReplicatedLogMaster
             return m_sender.SendMessage(msgs.GetJson(), uri);
         }
 
-        private void SendMessageAsync(MessagesOut msg, Uri uri, CountdownEvent cdeConcern, CountdownEvent cdeTotal, CancellationTokenSource token)
+        private void SendMessageAsync(MessagesOut msg, Uri uri, CountdownEvent cdeConcern, CountdownEvent cdeTotal)
         {
             var task = m_sender.SendMessageAsync(msg.GetJson(), uri);
 
@@ -246,16 +246,12 @@ namespace ReplicatedLogMaster
                         Console.WriteLine("Slave " + uri.ToString() + " - received");
 
                         if (!cdeConcern.IsSet)
-                        {
                             cdeConcern.Signal();
-                            if (cdeConcern.IsSet)
-                                token.Cancel();
-                        }
 
                         cdeTotal.Signal();
 
                         if (cdeTotal.IsSet)
-                            token.Cancel();
+                            cdeConcern.Reset(0);
 
                         return;
                     }
@@ -271,7 +267,7 @@ namespace ReplicatedLogMaster
                 cdeTotal.Signal();
 
                 if (cdeTotal.IsSet)
-                    token.Cancel();
+                    cdeConcern.Reset(0);
             });
         }
 
@@ -279,15 +275,13 @@ namespace ReplicatedLogMaster
         {        
             Console.WriteLine("Broadcasting message started");
 
-            var source = new CancellationTokenSource();
             var cdeConcern = new CountdownEvent(w - 1);
             var cdeTotal = new CountdownEvent(m_secondaries.Count);
 
             foreach (var s in m_secondaries)
-                SendMessageAsync(msg, s, cdeConcern, cdeTotal, source);
+                SendMessageAsync(msg, s, cdeConcern, cdeTotal);
 
-            cdeConcern.Wait(source.Token);
-            cdeTotal.Wait(source.Token);
+            cdeConcern.Wait();
 
             Console.WriteLine("Broadcasting finished");
 
