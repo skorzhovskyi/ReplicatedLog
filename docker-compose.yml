@@ -16,7 +16,7 @@ services:
       RETRY_TIME_OUT: 300
       PING_DELAY: 5
       RETRY_DELAY: 5
-      QUORUM: 2
+      QUORUM: 1
       BATCH_SIZE: 2
     ports:
       - "2100:2100"
@@ -27,6 +27,7 @@ services:
     build: ReplicatedLogSecondary2
     command: ["python", "service.py"]
     environment:
+      SERVICE_NAME: 'rep-log-secondary-1'
       SECONDARY_HOST: '0.0.0.0'
       SECONDARY_PORT: 5001
       POST_DELAY: 0
@@ -42,6 +43,7 @@ services:
     build: ReplicatedLogSecondary2
     command: ["python", "service.py"]
     environment:
+      SERVICE_NAME: 'rep-log-secondary-2'
       SECONDARY_HOST: '0.0.0.0'
       SECONDARY_PORT: 5002
       POST_DELAY: 0

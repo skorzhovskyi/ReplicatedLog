@@ -10,7 +10,7 @@ import flask
 from utils import get_console_logger
 
 
-SERVICE_NAME = 'replicated-log-secondary-2'
+SERVICE_NAME = 'rep-log-secondary'
 
 # Delay in sec for POST requests, default is no delay
 POST_DELAY: _t.Optional[int] = None
@@ -168,21 +168,23 @@ def append_message() -> flask.Response:
 
 
 def run_app() -> None:
-    global POST_DELAY, RETURN_ERROR_BEFORE_EVEN_MESSAGE, RETURN_ERROR_AFTER_EVEN_MESSAGE, LOGGER
+    global SERVICE_NAME, POST_DELAY, RETURN_ERROR_BEFORE_EVEN_MESSAGE, RETURN_ERROR_AFTER_EVEN_MESSAGE, LOGGER
 
     host = os.environ['SECONDARY_HOST']
     port = int(os.environ['SECONDARY_PORT'])
+
+    # Override service name if needed, f.e for logging
+    SERVICE_NAME = os.getenv('SERVICE_NAME', 'rep-log-secondary')
     POST_DELAY = int(os.getenv('POST_DELAY', 0))
     RETURN_ERROR_BEFORE_EVEN_MESSAGE = bool(os.getenv('ERROR_BEFORE_EVEN_MESSAGE', 'false') == 'true')
     RETURN_ERROR_AFTER_EVEN_MESSAGE = bool(os.getenv('ERROR_AFTER_EVEN_MESSAGE', 'false') == 'true')
+
+    LOGGER = get_console_logger(SERVICE_NAME, level=logging.DEBUG)
 
     app.run(host=host, port=port, debug=False)
 
 
 def main() -> None:
-    global LOGGER
-
-    LOGGER = get_console_logger(SERVICE_NAME, level=logging.DEBUG)
     run_app()
 
 
