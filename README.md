@@ -49,7 +49,9 @@ $ curl -XGET http://localhost:2202/
 {"messages":["hello"]}
 ```
 
-## Testing simple case
+## 🧪 Testing
+
+### Simple case
 
 Stop one secondary and send messages with different write concern
 
@@ -64,3 +66,14 @@ $ docker unpause replicatedlog_rep-log-secondary-2_1
 ```
 
 All messages must arrive after secondary was resurrected.
+
+### Testing ordering
+
+Set `ERROR_BEFORE_EVEN_MESSAGE = true` for secondary and send at least 3 messages. Even messages (messages with even id)
+will never be added into the queue and third message will never be displayed since second did not arrive.
+
+### Testing deduplication
+
+Set `ERROR_AFTER_EVEN_MESSAGE = true` for secondary and send at least 2 messages. Error will be generated after second
+message was added into the queue and master will continue with retries. Retried messages will not be added on secondary
+since message already exists.
