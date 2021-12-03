@@ -18,10 +18,14 @@ namespace ReplicatedLogMaster
 
     class Server
     {
+        const int RETRY_DELAY = 5 * 1000;
+        const int RETRY_BACKOFF = 5 * 1000;
+        const int MAX_RETRY_DELAY = 30 * 1000;
+
         List<string> m_messages;
 
         List<Uri> m_secondaries;
-        List<SecondaryHealth> m_secondariesStatus;
+        Dictionary<Uri, SecondaryHealth> m_secondariesStatus;
 
         Dictionary<Uri, List<MessagesOut>> m_retryQueue;
 
@@ -44,7 +48,7 @@ namespace ReplicatedLogMaster
 
             foreach (var s in m_secondaries)
             {
-                m_secondariesStatus.Add(SecondaryHealth.Undefined);
+                m_secondariesStatus[s] = SecondaryHealth.Undefined;
                 m_retryQueue[s] = new List<MessagesOut>();
             }
 
@@ -163,7 +167,7 @@ namespace ReplicatedLogMaster
 
         private bool IsQuorum()
         {
-            return m_secondariesStatus.Count(x => x == SecondaryHealth.Healthy) >= m_quorum;
+            return m_secondariesStatus.Count(x => x.Value == SecondaryHealth.Healthy) >= m_quorum;
         }
 
         private void EmptyRetryQueue(Uri uri)
@@ -187,7 +191,7 @@ namespace ReplicatedLogMaster
             }
         }
 
-        private void Ping(Uri uri, int secondaryId)
+        private void Ping(Uri uri)
         {
             Uri uriHealth = new Uri(uri, "health");
             var task = m_sender.GetAsync(uriHealth);
@@ -198,10 +202,10 @@ namespace ReplicatedLogMaster
                 {
                     if (result.Result)
                     {
-                        if (m_secondariesStatus[secondaryId] != SecondaryHealth.Healthy)
+                        if (m_secondariesStatus[uri] != SecondaryHealth.Healthy)
                             Console.WriteLine("Slave " + uriHealth.ToString() + " - available");
 
-                        m_secondariesStatus[secondaryId] = SecondaryHealth.Healthy;
+                        m_secondariesStatus[uri] = SecondaryHealth.Healthy;
 
                         EmptyRetryQueue(uri);
 
@@ -212,10 +216,10 @@ namespace ReplicatedLogMaster
                 {
                 }
 
-                if (m_secondariesStatus[secondaryId] != SecondaryHealth.Unhealthy)
+                if (m_secondariesStatus[uri] != SecondaryHealth.Unhealthy)
                     Console.WriteLine("Slave " + uriHealth.ToString() + " - unavailable");
 
-                m_secondariesStatus[secondaryId] = SecondaryHealth.Unhealthy;
+                m_secondariesStatus[uri] = SecondaryHealth.Unhealthy;
             });
         }
 
@@ -224,7 +228,7 @@ namespace ReplicatedLogMaster
             for (int i = 0; i < m_secondaries.Count; i++)
             {
                 Uri uri = m_secondaries[i];
-                Ping(uri, i);
+                Ping(uri);
             }
         }
         
@@ -233,10 +237,24 @@ namespace ReplicatedLogMaster
             return m_sender.SendMessage(msgs.GetJson(), uri);
         }
 
-        private void SendMessageAsync(MessagesOut msg, Uri uri, CountdownEvent cdeConcern, CountdownEvent cdeTotal)
+        private void AddToRetryQueue(MessagesOut msg, Uri uri)
         {
-            var task = m_sender.SendMessageAsync(msg.GetJson(), uri);
+            if (m_retryQueue[uri].Contains(msg))
+                return;
 
+            m_retryQueue[uri].Add(msg);
+        }
+
+        private void SendMessageAsync(MessagesOut msg, Uri uri, CountdownEvent cdeConcern, bool retry = true, int retryDelay = RETRY_DELAY)
+        {
+            if (m_secondariesStatus[uri] == SecondaryHealth.Unhealthy)
+            {
+                AddToRetryQueue(msg, uri);
+                return;
+            }
+
+            var task = m_sender.SendMessageAsync(msg.GetJson(), uri);
+            
             task.ContinueWith(result =>
             {
                 try
@@ -248,11 +266,6 @@ namespace ReplicatedLogMaster
                         if (!cdeConcern.IsSet)
                             cdeConcern.Signal();
 
-                        cdeTotal.Signal();
-
-                        if (cdeTotal.IsSet)
-                            cdeConcern.Reset(0);
-
                         return;
                     }
                 }
@@ -262,12 +275,12 @@ namespace ReplicatedLogMaster
 
                 Console.WriteLine("Slave " + uri.ToString() + " - failed");
 
-                m_retryQueue[uri].Add(msg);
-
-                cdeTotal.Signal();
-
-                if (cdeTotal.IsSet)
-                    cdeConcern.Reset(0);
+                if (retry)
+                {
+                    Thread.Sleep(retryDelay);
+                    Console.WriteLine("Retry slave " + uri.ToString());
+                    SendMessageAsync(msg, uri, cdeConcern, retry, Math.Min(retryDelay + RETRY_BACKOFF, MAX_RETRY_DELAY));
+                }
             });
         }
 
@@ -276,10 +289,9 @@ namespace ReplicatedLogMaster
             Console.WriteLine("Broadcasting message started");
 
             var cdeConcern = new CountdownEvent(w - 1);
-            var cdeTotal = new CountdownEvent(m_secondaries.Count);
 
             foreach (var s in m_secondaries)
-                SendMessageAsync(msg, s, cdeConcern, cdeTotal);
+                SendMessageAsync(msg, s, cdeConcern);
 
             cdeConcern.Wait();
 
